@@ -168,7 +168,7 @@
   ## to collect flm time management
   get.data3 <- function(data) {
     flm_decision <- data %>%
-      dplyr::select(-product_training, - work_time) %>%
+      dplyr::select(salesmen,phase,sales_training) %>%
       filter(salesmen!="0") %>%
       gather(project_name,
              days,
@@ -178,8 +178,22 @@
       dplyr::summarise(days = sum(days, na.rm = T)) %>%
       spread(project_name,days)
     
-    return(flm_decision)
-    }
+    flm_decision2 <- data %>%
+      dplyr::select(-product_training, -sales_training, - work_time) %>%
+      filter(salesmen!="0") %>%
+      gather(project_name,
+             days,
+             -salesmen,
+             -phase) %>%
+      group_by(project_name) %>%
+      filter(row_number()==1) %>%
+      dplyr::summarise(days = sum(days, na.rm = T)) %>%
+      spread(project_name,days)
+    
+    out <-bind_cols(flm_decision,flm_decision2)
+    
+    return(out)
+  }
   
   
   
