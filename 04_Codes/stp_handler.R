@@ -20,7 +20,7 @@
   
   options(scipen=200,
           mongodb = list(
-            "host" = "000000000"
+            "host" = ""
             # "username" = "root",
             # "password" = "root"
           ))
@@ -30,7 +30,6 @@
   ## receive signal
   # argss[1] :  R_File_Path
   # argss[2] :  filekey of json
-  # argss[3] :  reports save path
   argss <- commandArgs(TRUE)
   R_Json_Path <- argss[1]
   Phase <- as.integer(argss[2])
@@ -38,77 +37,7 @@
   #R_File_Path <- "resource/pre_data_linux.RData"
   #load(R_File_Path)
 
-  ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ##                              write function
-  ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
 
-  # writeDown <- function(report){
-  #   
-  #   wb <- createWorkbook()
-  #   
-  #   ## 1
-  #   addWorksheet(wb, rsd_sheet_names[1])
-  #   report7_1 <- cbind("name"="",report$report1_mod1)
-  #   colnames(report7_1)[1] <- report_sep_names[1]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[1],withFilter = F, report7_1,
-  #                  startCol = 1,rowNames = F,colNames = T)
-  #   report7_2 <- cbind("name"="",report$report1_mod2)
-  #   colnames(report7_2)[1] <- report_sep_names[2]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[1],withFilter = F, report7_2,
-  #                  startCol = 1,startRow = 8,rowNames = F,colNames = T)
-  #   
-  #   ## 2
-  #   addWorksheet(wb, rsd_sheet_names[2])
-  #   report1_1 <- cbind("name"="",report$report2_mod1)
-  #   colnames(report1_1)[1] <- report_sep_names[3]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[2],withFilter = F, report1_1,
-  #                  startCol = 1,rowNames = F,colNames = T)
-  #   report1_2 <- bind_rows(report$report2_mod2,
-  #                      report$report2_mod3,
-  #                      report$report2_mod4,
-  #                      report$report2_mod5)
-  #   report1_2 <- cbind("name"="",report1_2)
-  #   colnames(report1_2)[1] <- report_sep_names[4]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[2],withFilter = F, report1_2,
-  #                  startCol = 1,startRow = 8,rowNames = F,colNames = T)
-  #   
-  #   ## 3
-  #   addWorksheet(wb, rsd_sheet_names[3])
-  #   report2_1 <- cbind("name"="",report$report3_mod1)
-  #   colnames(report2_1)[1] <- report_sep_names[5]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[3],withFilter = F, report2_1,
-  #                  startCol = 1,rowNames = F,colNames = T)
-  #   report2_2 <- cbind("name"="",report$report3_mod2)
-  #   colnames(report2_2)[1] <- report_sep_names[6]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[3],withFilter = F, report2_2,
-  #                  startCol = 1,startRow = 9,rowNames = F,colNames = T)
-  #   
-  #   ## 4
-  #   addWorksheet(wb, rsd_sheet_names[4])
-  #   report3_1 <- cbind("name"="",report$report4_mod1)
-  #   colnames(report3_1)[1] <- report_sep_names[7]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[4],withFilter = F, report3_1,
-  #                  startCol = 1,rowNames = F,colNames = T)
-  #   
-  #   
-  #   
-  #   ## 7
-  #   addWorksheet(wb, rsd_sheet_names[5])
-  #   report6_1 <- cbind("name"=rep("",50),report$report5_mod1)
-  #   colnames(report6_1)[1] <- report_sep_names[8]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[5],withFilter = F, report6_1,
-  #                  startCol = 1,rowNames = F,colNames = T)
-  #   report6_2 <-cbind("name"=rep("",nrow(report$report5_mod2)),report$report5_mod2)
-  #   colnames(report6_2)[1] <- report_sep_names[9]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[5],withFilter = F, report6_2,
-  #                  startCol = 1,startRow = 53,rowNames = F,colNames = T)
-  #   report6_3 <- cbind("name"="",report$report5_mod3)
-  #   colnames(report6_3)[1] <- report_sep_names[10]
-  #   writeDataTable(wb, sheet = rsd_sheet_names[5],withFilter = F, report6_3,
-  #                  startCol = 1,startRow = sum(53,3,nrow(report6_2)),rowNames = F,colNames = T)
-  #   return(wb)}
-  
   ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##                              curve function
   ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1045,10 +974,10 @@
                                        pp_real_revenue=sum(.$pp_real_revenue,na.rm=T),
                                        target_revenue = sum(.$target_revenue,na.rm=T)))) %>%
       dplyr::mutate(real_revenue_increase = real_revenue - pp_real_revenue,
-                    real_revenue_increase_ratio = round(real_revenue_increase/pp_real_revenue*100,4),
-                    target_revenue_realization = ifelse(is.nan(round(real_revenue/target_revenue*100,4)),
+                    real_revenue_increase_ratio = round(real_revenue_increase/pp_real_revenue*100,0),
+                    target_revenue_realization = ifelse(is.nan(round(real_revenue/target_revenue*100,0)),
                                                         0,
-                                                        round(real_revenue/target_revenue*100,4))) %>%
+                                                        round(real_revenue/target_revenue*100,0))) %>%
       arrange(hosp_code) %>%
       select(hosp_code,
              hosp_name,
@@ -1085,8 +1014,8 @@
                                        real_revenue_by_sr=sum(.$real_revenue_by_sr,na.rm=T),
                                        pp_real_revenue_by_sr =sum(.$pp_real_revenue_by_sr,na.rm=T),
                                        target_revenue_by_sr=sum(.$target_revenue_by_sr,na.rm=T)))) %>%
-      dplyr::mutate(sr_target_revenue_realization = ifelse(is.nan(round(real_revenue_by_sr/target_revenue_by_sr,4)),0,
-                                                           round(real_revenue_by_sr/target_revenue_by_sr,4))) %>%
+      dplyr::mutate(sr_target_revenue_realization = ifelse(is.nan(round(real_revenue_by_sr/target_revenue_by_sr,0)),0,
+                                                           round(real_revenue_by_sr/target_revenue_by_sr,0))) %>%
       select(salesmen,
              prod_name,
              target_revenue_by_sr,
@@ -1114,10 +1043,10 @@
                                        pp_real_revenue_by_product=round(sum(.$pp_real_revenue_by_product,na.rm=T)),
                                        real_revenue_increase=sum(.$real_revenue_increase,na.rm=T),
                                        target_revenue_by_product=round(sum(.$target_revenue_by_product,na.rm=T))))) %>%
-      dplyr::mutate(real_revenue_increase_ratio = ifelse(is.nan(round(real_revenue_increase/pp_real_revenue_by_product,4)),0,
-                                                         round(real_revenue_increase/pp_real_revenue_by_product,4)),
-                    target_revenue_realization_by_product = ifelse(is.nan(round(real_revenue_by_product/target_revenue_by_product,4)),0,
-                                                                   round(real_revenue_by_product/target_revenue_by_product,4))) %>%
+      dplyr::mutate(real_revenue_increase_ratio = ifelse(is.nan(round(real_revenue_increase/pp_real_revenue_by_product,0)),0,
+                                                         round(real_revenue_increase/pp_real_revenue_by_product,0)),
+                    target_revenue_realization_by_product = ifelse(is.nan(round(real_revenue_by_product/target_revenue_by_product,0)),0,
+                                                                   round(real_revenue_by_product/target_revenue_by_product,0))) %>%
       select(prod_name,
              target_revenue_by_product,
              pp_real_revenue_by_product,
