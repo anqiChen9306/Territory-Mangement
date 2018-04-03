@@ -76,7 +76,7 @@
                                      "hosp_name")) %>%   ## need adjust to pro_code in 2.0 version
       left_join(promotioal_budget_list, by="phase") %>%
       dplyr::mutate(budget = budget/100*total_budget,
-                    prod_hours = prod_hours/100)
+                    prod_hours = prod_hours)
     return(tmp1)
       
   }
@@ -481,6 +481,7 @@
                                              function(x) curve(find_sta("curve12",curves,"curves"),x)),
                     overhead_time = round(overhead_factor*overhead,0),
                     real_sr_time = round(sr_time-overhead_time*overhead_proportion,2),
+                    real_sr_time = ifelse(real_sr_time < 0, 0, real_sr_time),
                     pp_experience_index = round(sapply(pp_sr_acc_revenue,function(x) round(curve(find_sta("curve11",curves,"curves"),x),2))),
                     field_work_peraccount = field_work/ifelse(no_hospitals==0,0.0001,no_hospitals),
                     product_knowledge_addition_current_period = sapply(product_training,function(x)curve(find_sta("curve26",curves,"curves"),x)),
