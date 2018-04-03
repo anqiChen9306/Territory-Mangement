@@ -466,7 +466,9 @@
       dplyr::mutate(sr_time=prod_hours,
         no_hospitals = n_distinct(hosp_name),
         sr_time_total=sum(sr_time,na.rm=T),
-        last_revenue_by_sr = sum(pp_real_revenue,na.rm=T)) %>%
+        last_revenue_by_sr = sum(pp_real_revenue,na.rm=T),
+        overhead_proportion = sr_time/sr_time_total,
+        overhead_proportion = ifelse(is.nan(overhead_proportion),0,overhead_proportion)) %>%
       ungroup %>%
       group_by(phase,hosp_name) %>%
       dplyr::mutate(sr_time_by_hosp=sum(sr_time,na.rm=T)) %>%
@@ -478,7 +480,7 @@
                     overhead_factor = sapply(pp_motivation_index,
                                              function(x) curve(find_sta("curve12",curves,"curves"),x)),
                     overhead_time = round(overhead_factor*overhead,0),
-                    real_sr_time = round(sr_time-overhead_time*prod_hours,2),
+                    real_sr_time = round(sr_time-overhead_time*overhead_proportion,2),
                     pp_experience_index = round(sapply(pp_sr_acc_revenue,function(x) round(curve(find_sta("curve11",curves,"curves"),x),2))),
                     field_work_peraccount = field_work/ifelse(no_hospitals==0,0.0001,no_hospitals),
                     product_knowledge_addition_current_period = sapply(product_training,function(x)curve(find_sta("curve26",curves,"curves"),x)),
@@ -974,7 +976,9 @@
                                        pp_real_revenue=sum(.$pp_real_revenue,na.rm=T),
                                        target_revenue = sum(.$target_revenue,na.rm=T)))) %>%
       dplyr::mutate(real_revenue_increase = real_revenue - pp_real_revenue,
-                    real_revenue_increase_ratio = round(real_revenue_increase/pp_real_revenue*100,0),
+                    real_revenue_increase_ratio = ifelse(is.nan(round(real_revenue_increase/pp_real_revenue*100,0)),
+                                                         0,
+                                                         round(real_revenue_increase/pp_real_revenue*100,0)),
                     target_revenue_realization = ifelse(is.nan(round(real_revenue/target_revenue*100,0)),
                                                         0,
                                                         round(real_revenue/target_revenue*100,0))) %>%
@@ -1014,8 +1018,8 @@
                                        real_revenue_by_sr=sum(.$real_revenue_by_sr,na.rm=T),
                                        pp_real_revenue_by_sr =sum(.$pp_real_revenue_by_sr,na.rm=T),
                                        target_revenue_by_sr=sum(.$target_revenue_by_sr,na.rm=T)))) %>%
-      dplyr::mutate(sr_target_revenue_realization = ifelse(is.nan(round(real_revenue_by_sr/target_revenue_by_sr,0)),0,
-                                                           round(real_revenue_by_sr/target_revenue_by_sr,0))) %>%
+      dplyr::mutate(sr_target_revenue_realization = ifelse(is.nan(round(real_revenue_by_sr/target_revenue_by_sr*100,0)),0,
+                                                           round(real_revenue_by_sr/target_revenue_by_sr*100,0))) %>%
       select(salesmen,
              prod_name,
              target_revenue_by_sr,
@@ -1043,10 +1047,10 @@
                                        pp_real_revenue_by_product=round(sum(.$pp_real_revenue_by_product,na.rm=T)),
                                        real_revenue_increase=sum(.$real_revenue_increase,na.rm=T),
                                        target_revenue_by_product=round(sum(.$target_revenue_by_product,na.rm=T))))) %>%
-      dplyr::mutate(real_revenue_increase_ratio = ifelse(is.nan(round(real_revenue_increase/pp_real_revenue_by_product,0)),0,
-                                                         round(real_revenue_increase/pp_real_revenue_by_product,0)),
-                    target_revenue_realization_by_product = ifelse(is.nan(round(real_revenue_by_product/target_revenue_by_product,0)),0,
-                                                                   round(real_revenue_by_product/target_revenue_by_product,0))) %>%
+      dplyr::mutate(real_revenue_increase_ratio = ifelse(is.nan(round(real_revenue_increase/pp_real_revenue_by_product*100,0)),0,
+                                                         round(real_revenue_increase/pp_real_revenue_by_product*100,0)),
+                    target_revenue_realization_by_product = ifelse(is.nan(round(real_revenue_by_product/target_revenue_by_product*100,0)),0,
+                                                                   round(real_revenue_by_product/target_revenue_by_product*100,0))) %>%
       select(prod_name,
              target_revenue_by_product,
              pp_real_revenue_by_product,
