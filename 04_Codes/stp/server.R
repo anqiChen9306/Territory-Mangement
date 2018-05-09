@@ -7304,69 +7304,72 @@ server=function(input, output, session) {
     # credentials <- readRDS("credentials/credentials.rds")
     # credentials <-  read.csv("credentials/register_data.csv", sep = ",",
     #                          stringsAsFactors = FALSE)
-    db <- mongo(collection = collectionName,
-                url = sprintf(
-                  "mongodb://%s/%s",
-                  # options()$mongodb$username,
-                  # options()$mongodb$password,
-                  options()$mongodb$host,
-                  databaseName))
-    # Read all the entries
-    credentials <- db$find()
+    user_input$authenticated = T
+    user_input$valid_credentials = T
     
-    
-    
-    row_username <- which(credentials$user == input$user_name)
-    row_password <- which(credentials$pw == digest(input$password)) # digest() makes md5 hash of password
-    
-    # if user name row and password name row are same, credentials are valid
-    #   and retrieve locked out status
-    if (length(row_username) == 1 && 
-        length(row_password) >= 1 &&  # more than one user may have same pw
-        (row_username %in% row_password)) {
-      user_input$valid_credentials <- TRUE
-      user_input$user_locked_out <- credentials$locked_out[row_username]
-      user_input$time_stamp <- credentials$timestamp[row_username]
-    }
-    
-    # if user is not currently locked out but has now failed login too many times:
-    #   1. set current lockout status to TRUE
-    #   2. if username is present in credentials DF, set locked out status in 
-    #     credentials DF to TRUE and save DF
-    if (input$login_button == num_fails_to_lockout & 
-        user_input$user_locked_out == FALSE) {
-      
-      user_input$user_locked_out <- TRUE
-      
-      if (length(row_username) == 1) {
-        credentials$locked_out[row_username] <- TRUE
-        
-        write.csv(credentials, "credentials/register_data.csv")
-      }
-    }
-    
-    # if a user has valid credentials and is not locked out, he is authenticated      
-    if (user_input$valid_credentials == TRUE & user_input$user_locked_out == FALSE) {
-      user_input$authenticated <- TRUE
-      user_input$time <- gsub("-","_",Sys.Date())
-      system(paste("mkdir users/",input$user_name,"/",
-                   user_input$time,"_",user_input$time_stamp,sep=""))
-    } else {
-      user_input$authenticated <- FALSE
-    }
-    
-    # if user is not authenticated, set login status variable for error messages below
-    if (user_input$authenticated == FALSE) {
-      if (user_input$user_locked_out == TRUE) {
-        user_input$status <- "locked_out"  
-      } else if (length(row_username) > 1) {
-        user_input$status <- "credentials_data_error"  
-      } else if (input$user_name == "" || length(row_username) == 0) {
-        user_input$status <- "bad_user"
-      } else if (input$password == "" || length(row_password) == 0) {
-        user_input$status <- "bad_password"
-      }
-    }
+    # db <- mongo(collection = collectionName,
+    #             url = sprintf(
+    #               "mongodb://%s/%s",
+    #               # options()$mongodb$username,
+    #               # options()$mongodb$password,
+    #               options()$mongodb$host,
+    #               databaseName))
+    # # Read all the entries
+    # credentials <- db$find()
+    # 
+    # 
+    # 
+    # row_username <- which(credentials$user == input$user_name)
+    # row_password <- which(credentials$pw == digest(input$password)) # digest() makes md5 hash of password
+    # 
+    # # if user name row and password name row are same, credentials are valid
+    # #   and retrieve locked out status
+    # if (length(row_username) == 1 && 
+    #     length(row_password) >= 1 &&  # more than one user may have same pw
+    #     (row_username %in% row_password)) {
+    #   user_input$valid_credentials <- TRUE
+    #   user_input$user_locked_out <- credentials$locked_out[row_username]
+    #   user_input$time_stamp <- credentials$timestamp[row_username]
+    # }
+    # 
+    # # if user is not currently locked out but has now failed login too many times:
+    # #   1. set current lockout status to TRUE
+    # #   2. if username is present in credentials DF, set locked out status in 
+    # #     credentials DF to TRUE and save DF
+    # if (input$login_button == num_fails_to_lockout & 
+    #     user_input$user_locked_out == FALSE) {
+    #   
+    #   user_input$user_locked_out <- TRUE
+    #   
+    #   if (length(row_username) == 1) {
+    #     credentials$locked_out[row_username] <- TRUE
+    #     
+    #     write.csv(credentials, "credentials/register_data.csv")
+    #   }
+    # }
+    # 
+    # # if a user has valid credentials and is not locked out, he is authenticated      
+    # if (user_input$valid_credentials == TRUE & user_input$user_locked_out == FALSE) {
+    #   user_input$authenticated <- TRUE
+    #   user_input$time <- gsub("-","_",Sys.Date())
+    #   system(paste("mkdir users/",input$user_name,"/",
+    #                user_input$time,"_",user_input$time_stamp,sep=""))
+    # } else {
+    #   user_input$authenticated <- FALSE
+    # }
+    # 
+    # # if user is not authenticated, set login status variable for error messages below
+    # if (user_input$authenticated == FALSE) {
+    #   if (user_input$user_locked_out == TRUE) {
+    #     user_input$status <- "locked_out"  
+    #   } else if (length(row_username) > 1) {
+    #     user_input$status <- "credentials_data_error"  
+    #   } else if (input$user_name == "" || length(row_username) == 0) {
+    #     user_input$status <- "bad_user"
+    #   } else if (input$password == "" || length(row_password) == 0) {
+    #     user_input$status <- "bad_password"
+    #   }
+    # }
   })   
   
   # password entry UI componenets:
