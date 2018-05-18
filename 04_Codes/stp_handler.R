@@ -1,12 +1,11 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 # ProjectName:  TMIST
-# Purpose:      sales training
+# Purpose:      Calculation
 # programmer:   Anqi Chen
 # Date:         20-11-2017
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-##-- handle the exception thrown out
 
   library(DT)
   library(plyr)
@@ -20,7 +19,7 @@
   
   options(scipen=200,
           mongodb = list(
-            "host" = ""
+            "host" = "192.168.100.142:27017"
             # "username" = "root",
             # "password" = "root"
           ))
@@ -255,7 +254,7 @@
   
   
   
-  transfer1 <- db_inter$find(paste('{"uuid" : "',R_Json_Path,'"}',sep = ""))
+  
   
   if (Phase ==1) {
     
@@ -270,10 +269,10 @@
   } else {
     
     
-    
-    inter_data <- transfer1$inter$data[[1]]
-    last_report1_1 <- transfer1$inter$report[[1]]
-    last_acc_success_value <- transfer1$inter$acc_success_value[[1]]
+    transfer1 <- db_inter$find(paste('{"uuid" : "',R_Json_Path,'"}',sep = ""))
+    inter_data <- transfer1$inter[[1]]$data[[1]]
+    last_report1_1 <- transfer1$inter[[1]]$report[[1]]
+    last_acc_success_value <- transfer1$inter[[1]]$acc_success_value
     # colnames(last_report1_1) <- as.vector(sapply(colnames(last_report1_1),function(x) as_utf8(x)))
   }
   
@@ -1166,31 +1165,77 @@
                    "time" = as.numeric(as.POSIXct(Sys.Date(), format="%Y-%m-%d")),
                    "report"=to_mongo_tmp)
   
+  
 #####-- intermedia data
-  if (Phase == 1) {
-  if (R_Json_Path %in% transfer1$uuid) {
+  if (R_Json_Path %in% db_inter$find()$uuid) {
     
-    mongo_tmp <- paste('{"uuid" : ', '"', R_Json_Path, '"}',sep = "")
-    mongo_tmp1 <- paste('{"$set":{"inter":',
-                        toJSON(list("phase" = Phase,
-                                    "data" = data_to_use,
-                                    "report" = report1_1_tmp,
-                                    "acc_success_value" = data_to_use2$acc_success_value),
-                               auto_unbox = T),'}}', sep = "")
-    db_inter$update(mongo_tmp, mongo_tmp1)
+    transfer1 <- db_inter$find(paste('{"uuid" : "',R_Json_Path,'"}',sep = ""))
+    inter_info <- transfer1$inter[[1]]
     
+    if (Phase %in% inter_info$phase) {
+      
+      inter_out <- lapply(1:nrow(inter_info), function(x) {
+        
+        inter_chk <- inter_info[x,]
+        
+        if (inter_chk$phase == Phase) {
+          
+          list("phase" = Phase,
+               "data" = data_to_use,
+               "report" = report1_1_tmp,
+               "acc_success_value" = data_to_use2$acc_success_value)
+        } else {
+          
+          list("phase" = inter_chk$phase,
+               "data" = inter_chk$data,
+               "report" = inter_chk$report,
+               "acc_success_value" = inter_chk$acc_success_value)
+        }
+      })
+      
+    } else {
+      
+      inter_out <- lapply(1:2, function(x) {
+        
+
+        if (x == 1) {
+          
+          list("phase" = inter_info$phase,
+               "data" = inter_info$data[[1]],
+               "report" = inter_info$report[[1]],
+               "acc_success_value" = inter_info$acc_success_value)
+          
+        } else {
+          
+          list("phase" = Phase,
+               "data" = data_to_use,
+               "report" = report1_1_tmp,
+               "acc_success_value" = data_to_use2$acc_success_value)
+        }
+      })
+    }
+
+     mongo_tmp <- paste('{"uuid" : ', '"', R_Json_Path, '"}',sep = "")
+     mongo_tmp1 <- paste('{"$set":{"inter":',
+                         toJSON(inter_out,
+                                auto_unbox = T),'}}', sep = "")
+     db_inter$update(mongo_tmp, mongo_tmp1)
+     
   } else {
     
     db_inter$insert(list("uuid"=R_Json_Path,
-                    "user_id"=user_name,
-                    "inter"=list("phase" = Phase,
-                                 "data" = data_to_use,
-                                 "report" = report1_1_tmp,
-                                 "acc_success_value" = data_to_use2$acc_success_value)),
-               na="string",
-               auto_unbox = T)  
+                         "user_id"=user_name,
+                         "inter"=list(list("phase" = Phase,
+                                      "data" = data_to_use,
+                                      "report" = report1_1_tmp,
+                                      "acc_success_value" = data_to_use2$acc_success_value))),
+                    na="string",
+                    auto_unbox = T) 
+      
+    }
   
-  }}
+  
+  
   
   
   

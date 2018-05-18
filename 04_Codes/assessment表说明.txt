@@ -1,0 +1,36 @@
+#能力测评报告##表对应元素名#
+#表的地址在59.110.31.50
+#表名：assessment
+
+#1. 首先根据type识别对应的能力测评结果
+     “overall” ——>模块1、整体表现
+     “hospital”——>模块2、医院角度 
+     “product”——>模块3、产品角度
+
+#2. 在每个type下，“phase”值——>第几个周期，
+以下为列名对照表：
+
+       #“overall”中： “phase”——>周期
+                                 “total_revenue_for2phase”——>总销售额
+                                 “market_share”——>市场份额
+                                 “market_share_growth”——>市场份额增加
+                                 “team_ability”——>团队能力
+                                 “team_ability_growth”——>团队能力增长
+    
+      #“hospital”中：   “hosp_name”医院名称
+                                    “prod_name”产品名称
+                                    “total_revenue_by_hosp”医院销售额
+                                    “total_revenue_by_hosp_growth”医院销售额增长率
+                                    “real_revenue”产品销售额
+                                    “real_revenue_growth”产品销售额增长率
+                                    “market_share”产品份额
+                                    “market_share”产品份额增长
+
+       #“product”中： “hosp_name”医院名称
+                                   “prod_name”产品名称
+                                   “total_revenue_by_hosp”产品销售额
+                                   “total_revenue_by_hosp_growth”产品销售额增长率
+                                   “real_revenue”医院销售额
+                                   “real_revenue_growth”医院销售额增长率
+                                   “market_share”医院份额   
+                                   “market_share”医院份额增长
