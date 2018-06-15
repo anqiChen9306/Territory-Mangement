@@ -1077,7 +1077,7 @@
                 "team_ability_info" = list("pp_team_ability" = final_pp_team_ability,
                                            "team_ability"= final_team_ability,
                                            "uplift_ratio"= final_team_ability_uplift_ratio)),
-                list("phase" = pp_info,
+                list("phase" = pp_info$phase,
                      "assess_results" = pp_assess_results,
                      "final_revenue_info" = list("pp_revenue"=pp_final_revenue_info$pp_revenue,
                                                  "revenue"= pp_final_revenue_info$revenue,
