@@ -1067,7 +1067,7 @@
     final_team_ability <- info$team_ability_info$team_ability
     final_team_ability_uplift_ratio <- final_team_ability/final_pp_team_ability-1
     
-    out <- list("phase" = 100,
+    out <- list(list("phase" = 100,
                 "assess_results" = final_assess_results,
                 "final_revenue_info" = list("pp_revenue"=final_pp_total_revenue,
                                             "revenue"= final_total_revenue,
@@ -1076,7 +1076,17 @@
                 "market_share_info" = final_market_share_info,
                 "team_ability_info" = list("pp_team_ability" = final_pp_team_ability,
                                            "team_ability"= final_team_ability,
-                                           "uplift_ratio"= final_team_ability_uplift_ratio))
+                                           "uplift_ratio"= final_team_ability_uplift_ratio)),
+                list("phase" = pp_info,
+                     "assess_results" = pp_assess_results,
+                     "final_revenue_info" = list("pp_revenue"=pp_final_revenue_info$pp_revenue,
+                                                 "revenue"= pp_final_revenue_info$revenue,
+                                                 "uplift_ratio" = pp_final_revenue_info$uplift_ratio),
+                     "achievement_info" = pp_achievement_info,
+                     "market_share_info" = pp_market_share_info,
+                     "team_ability_info" = list("pp_team_ability" = pp_team_ability_info$pp_team_ability,
+                                                "team_ability"= pp_team_ability_info$team_ability,
+                                                "uplift_ratio"= pp_team_ability_info$uplift_ratio)))
     
     return(out)
     
@@ -1099,9 +1109,9 @@
       
       final_assess <- aggregation_assess_reports(assess_info,
                                                  pp_assess_info)
-      out <- list("phase_1" = as.list(pp_assess_info),
+      out <- list("phase_1" = final_assess[[2]],
                   "phase_2" = assess_info,
-                  "final" = final_assess)
+                  "final" = final_assess[[1]])
     }
     
     mongo_assess_tmp <- paste('{"uuid" : ', '"', R_Json_Path, '"}',sep = "")
