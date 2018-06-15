@@ -35,9 +35,6 @@
   #file_path <- argss[3]
   #R_File_Path <- "resource/pre_data_linux.RData"
   #load(R_File_Path)
-  
-  ## R_Json_Path <- "219776aa-6d5a-4bcf-bc99-74857e86ec7a"
-  ## Phase <-1
 
 
   ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -247,27 +244,6 @@
                         options()$mongodb$host,
                         "TMIST"))
   
-  best_allocations <- info_pre$best_allocations[[1]]
-  
-  mongodb_target <- mongo(collection = "target",
-                          url = sprintf(
-                            "mongodb://%s/%s",
-                            # options()$mongodb$username,
-                            # options()$mongodb$password,
-                            options()$mongodb$host,
-                            "TMIST"))
-  
-  set_target_revenue_info <- mongodb_target$find()
-  
-  mongodb_ass <- mongo(collection = "assessment",
-                       url = sprintf(
-                         "mongodb://%s/%s",
-                         # options()$mongodb$username,
-                         # options()$mongodb$password,
-                         options()$mongodb$host,
-                         "TMIST"))
-  
-  
   # Read all the entries
   transfer <- json_inputs$find(paste('{"uuid" : "',R_Json_Path,'"}',sep = ""))
   decision <- transfer$decision[[1]]
@@ -282,6 +258,10 @@
   
   if (Phase ==1) {
     
+    # last_report1_1 <- p0_report
+    # last_acc_success_value <- 0
+    
+ 
     inter_data <- info_pre$inter$data[[1]]
     last_report1_1 <- info_pre$inter$report[[1]]
     last_acc_success_value <- info_pre$inter$acc_success_value[[1]]
@@ -290,15 +270,10 @@
     
     
     transfer1 <- db_inter$find(paste('{"uuid" : "',R_Json_Path,'"}',sep = ""))
-    transfer1_m <- filter(transfer1$inter[[1]], phase == Phase-1)
-    inter_data <- transfer1_m$data[[1]]
-    last_report1_1 <- transfer1_m$report[[1]]
-    last_acc_success_value <- transfer1_m$acc_success_value
-    
-    assess_info_need <- mongodb_ass$find(paste('{"uuid" : "',R_Json_Path,'"}',sep = ""))
-    pp_assess_info <- assess_info_need$result$phase_1
-    
-    
+    inter_data <- transfer1$inter[[1]]$data[[1]]
+    last_report1_1 <- transfer1$inter[[1]]$report[[1]]
+    last_acc_success_value <- transfer1$inter[[1]]$acc_success_value
+    # colnames(last_report1_1) <- as.vector(sapply(colnames(last_report1_1),function(x) as_utf8(x)))
   }
   
   last_report1_1[,2:6] <- apply(last_report1_1[,2:6], 2, function(x) as.numeric(gsub(",","",x)))
@@ -355,6 +330,60 @@
     filter(phase==Phase)
   
   
+  ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ##                              Validation
+  ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
+  
+  
+  # con <- socketConnection(host="localhost", port = 6011, blocking=TRUE,
+  #                         server=FALSE, open="r+")
+  
+  # chk_data <- function(){
+  #   calculator_result <- calculator(input,phase)
+  #   numberOfhosp <- vapply(1:10,function(x) test(phase,hosp=x,input),c(c=0))
+  #   flm_data <- get.data3(input,phase)
+  #   
+  #   if (sum(numberOfhosp,na.rm=T)>0) {
+  #     
+  #     warning(paste("error1:",warning_ch[1],paste(numberOfhosp[which(!is.na(numberOfhosp))],collapse=","),warning_ch[2]))
+  #     return_value <- "error1"
+  #   } else if (calculator_result[1]==0|
+  #              calculator_result[2]==0|
+  #              calculator_result[3]==0|
+  #              calculator_result[4]==0|
+  #              calculator_result[5]==0|
+  #              calculator_result[6]==0) {
+  #     warning("error2")
+  #     return_value <- "error2"
+  #     
+  #   } else if (
+  #     calculator_result[1] >100 | 
+  #     calculator_result[2] >100 | 
+  #     calculator_result[3] >100 | 
+  #     calculator_result[4] >100 | 
+  #     calculator_result[5] >100 | 
+  #     calculator_result[6] >100 | 
+  #     sum(flm_data) >worktime
+  #   ) {
+  #     warning("error3")
+  #     return_value <- "error3"
+  #     
+  #   } else { 
+  #     return_value <- NULL}
+  #   return(return_value)
+  # }
+  # 
+  # result <- tryCatch({
+  #   e <- chk_data()
+  # }, warning = function(war) {
+  #   
+  #   # warning handler picks up where error was generated
+  #   print( war)
+  #   
+  # })
+  # 
+  
+  
   
   ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ##                      begin computation
@@ -364,11 +393,6 @@
   cp_data1 <- get.data1(decision_input)
   cp_data2 <- get.data2(management_input)
   flm_data <- get.data3(cp_data2)
-  
-  pp_potential_info <- hospital_info %>%
-    filter(phase == Phase-1) %>%
-    mutate(pp_potential = potential) %>%
-    select(-hosp_name, -prod_name, -phase, -potential) 
   
   pp_data1 <- inter_data %>% select(hosp_name,
                                 hosp_code,
@@ -384,8 +408,7 @@
                                 offer_attractiveness,
                                 acc_offer_attractiveness) %>%
     mutate(acc_success_value = last_acc_success_value)%>%
-    distinct() %>%
-    left_join(pp_potential_info, by = c("hosp_code", "prod_code"))
+    distinct()
   
   colnames(pp_data1)[5:14] <- paste("pp_",colnames(pp_data1)[5:14],sep="")
   
@@ -616,511 +639,6 @@
                              cp_data1,
                              cp_data2)
   
-  ##----------------------------------------------------------------------------
-  ##--                 making assessment
-  ##----------------------------------------------------------------------------
-  
-  assessment_func <- function(input_phase,
-                              data,
-                              management_part,
-                              decision_part,
-                              target_info,
-                              best_allocations_info
-  ) {
-    # input_phase <- Phase
-    # data <- data_to_use
-    # management_part <- management_input
-    # decision_part <- decision_input
-    # target_info <- set_target_revenue_info
-    # best_allocations_info <- best_allocations
-    
-    ## Part 1 
-    total_revenue <- sum(data$real_revenue)
-    pp_total_revenue <- sum(data$pp_real_revenue)
-    total_revenue_uplift_ratio <- total_revenue/pp_total_revenue - 1 
-    
-    achievement_info <- data %>%
-      group_by(phase,prod_code) %>%
-      dplyr::summarise(real_revenue = sum(real_revenue, na.rm = T),
-                       target_revenue = sum(target_revenue, na.rm = T)) %>%
-      dplyr::mutate(achievement_ratio = real_revenue/target_revenue,
-                    achievement_ratio = ifelse(is.nan(achievement_ratio),
-                                               0,
-                                               achievement_ratio)) %>%
-      dplyr::select(phase, prod_code, real_revenue, target_revenue, achievement_ratio)
-    
-    market_share_info <- data %>%
-      group_by(phase,prod_code) %>%
-      dplyr::summarise(pp_real_revenue = sum(pp_real_revenue, na.rm = T),
-                       real_revenue = sum(real_revenue, na.rm = T),
-                       pp_potential = sum(pp_potential, na.rm = T),
-                       potential = sum(potential, na.rm = T)) %>%
-      dplyr::mutate(pp_market_share = pp_real_revenue/pp_potential,
-                    market_share = real_revenue/potential,
-                    uplift_ratio = market_share - pp_market_share) %>%
-      dplyr::select(phase, prod_code, pp_market_share, market_share, uplift_ratio)
-    
-    team_ability_info <- data %>%
-      filter(salesmen !=0) %>%
-      group_by(phase,salesmen) %>%
-      dplyr::summarise(sales_skills_index = first(sales_skills_index),
-                       product_knowledge_index = first(product_knowledge_index),
-                       motivation_index = first(motivation_index),
-                       pp_sales_skills_index = first(pp_sales_skills_index),
-                       pp_product_knowledge_index = first(pp_product_knowledge_index),
-                       pp_motivation_index = first(pp_motivation_index)) %>%
-      dplyr::summarise(sales_skills_index = mean(sales_skills_index),
-                       product_knowledge_index = mean(product_knowledge_index),
-                       motivation_index = mean(motivation_index),
-                       pp_sales_skills_index = mean(pp_sales_skills_index),
-                       pp_product_knowledge_index = mean(pp_product_knowledge_index),
-                       pp_motivation_index = mean(pp_motivation_index)) %>%
-      dplyr::mutate(team_ability = (sales_skills_index+product_knowledge_index+motivation_index)/3,
-                    pp_team_ability = (pp_sales_skills_index+pp_product_knowledge_index+pp_motivation_index)/3,
-                    uplift_ratio = team_ability-pp_team_ability) %>%
-      dplyr::select(phase, pp_team_ability, team_ability, uplift_ratio)
-    
-    
-    ## point A
-    overall_target_realization <-
-      sum(data_to_use$real_revenue)/sum(filter(target_info,
-                                               phase==input_phase)$set_target_revenue)
-    ### KPI 1 当期市场份额增长率
-    
-    kpi_1_info_1 <- data_to_use %>%
-      filter(prod_code!=4) %>%
-      arrange(-potential) %>%
-      mutate(pp_market_share = ifelse(pp_potential == 0,
-                                      pp_real_revenue/(pp_potential+1), 
-                                      pp_real_revenue/pp_potential),
-             cp_market_share = ifelse(potential == 0,
-                                      prod_value/(potential+1),
-                                      prod_value/potential),
-             cum_proportion = cumsum(potential)/sum(potential),
-             cluster = ifelse(cum_proportion<=0.8,1,2),
-             chk = ifelse(cp_market_share- pp_market_share>0,
-                          1,
-                          0)) %>%
-      group_by(cluster) %>%
-      summarise(good_num = sum(chk),
-                total_num = n()) %>%
-      mutate(cluster_pro = good_num/total_num,
-             cluster_score = ifelse(cluster==1,
-                                    0.6*cluster_pro,
-                                    0.4*cluster_pro)) %>%
-      select(cluster,
-             cluster_pro, cluster_score)
-    
-    kpi_1_1_1 <- diff(c(6,unique(management_input$kpi_analysis)))  # check KPI analysis
-    kpi_1_1_2 <- sum(kpi_1_info_1$cluster_score) #check estimated market share&current share
-    
-    if ((kpi_1_1_1 <0&kpi_1_1_1>4) | kpi_1_1_2<0.6) {
-      kpi_1_1 <- 1
-    } else if (kpi_1_1_2>= 0.6 & kpi_1_1_2<0.7) {
-      kpi_1_1 <- 2
-    } else if (kpi_1_1_2>= 0.7 & kpi_1_1_2<0.8) {
-      kpi_1_1 <- 3
-    } else if (kpi_1_1_2>= 0.8 & kpi_1_1_2<0.9) {
-      kpi_1_1 <- 4
-    } else { kpi_1_1 <- 5}
-    
-    
-    ### KPI 2 市场增长率对比指标增长率
-    kpi_1_info_2 <- data_to_use %>%
-      mutate(market_growth = ifelse(pp_potential == 0,
-                                    potential/(pp_potential+1),
-                                    potential/pp_potential),
-             tgrevenue_growth = ifelse(pp_real_revenue == 0,
-                                       prod_value/(pp_real_revenue+1),
-                                       prod_value/pp_real_revenue),
-             pp_market_share = ifelse(pp_potential==0,
-                                      0,
-                                      pp_real_revenue/pp_potential),
-             wgt = potential/sum(potential)) %>%
-      filter(prod_code != 4) %>%
-      mutate(rank_1 = dense_rank(-market_growth),
-             rank_2 = dense_rank(pp_market_share),
-             rank_12 = (rank_1+rank_2)/2,
-             rank_3 = dense_rank(-tgrevenue_growth)) %>%
-      select(hosp_code, prod_code, pp_market_share, 
-             market_growth, tgrevenue_growth,
-             rank_12, rank_3,wgt) %>%
-      mutate(chk = rank_12 - rank_3,
-             summ = sum(rank_12),
-             numm = n()-1)
-    
-    kpi_1_info_2$chk_m <- scale(abs(kpi_1_info_2$chk),center = F)
-    kpi_1_info_2 <- kpi_1_info_2 %>%
-      mutate(chk_m1 = wgt*chk_m)
-    kpi_1_2_1 <- sum(kpi_1_info_2$chk_m1)
-    
-    if (kpi_1_2_1 > 1) {
-      kpi_1_2 <- 1
-    } else if (kpi_1_2_1 >0.9& kpi_1_2_1 <= 1) {
-      kpi_1_2 <- 2  
-    } else if (kpi_1_2_1 >0.8& kpi_1_2_1 <=0.9) {
-      kpi_1_2 <- 3
-    } else if (kpi_1_2_1 >0.6& kpi_1_2_1 <=0.8) {
-      kpi_1_2 <- 4
-    } else {kpi_1_2 <- 5}
-    
-    
-    
-    ### KPI 3 指标贡献度
-    kpi_1_info_3 <- data_to_use %>%
-      group_by(hosp_code) %>%
-      mutate(adj_potential = ifelse((phase==2&hosp_code%in%c(1,2,3,8))|phase==1,
-                                    0,
-                                    potential)) %>%
-      summarise(target_revenue = sum(prod_value, na.rm = T),
-                potential = sum(potential, na.rm = T)) %>%
-      arrange(-target_revenue) %>%
-      mutate(cum_prob_tgrevenue = cumsum(target_revenue)/sum(target_revenue, na.rm = T),
-             rank_target = row_number()) %>%
-      arrange(-potential) %>%
-      mutate(cum_prob_potential = cumsum(potential)/sum(potential, na.rm = T)) %>%
-      select(hosp_code,cum_prob_tgrevenue, cum_prob_potential,
-             rank_target)
-    
-    kpi_1_3_1 <- dist(rbind(kpi_1_info_3$cum_prob_tgrevenue, kpi_1_info_3$cum_prob_potential))
-    users_target_hosp <- kpi_1_info_3 %>%
-      filter(rank_target <= 4)
-    
-    if (kpi_1_3_1 > 0.6) {
-      kpi_1_3 <- 1
-    } else if (kpi_1_3_1 >0.4& kpi_1_3_1 <= 6) {
-      kpi_1_3 <- 2 
-    } else if (kpi_1_3_1 >0.25& kpi_1_3_1 <=0.4) {
-      kpi_1_3 <- 3
-    } else if (kpi_1_3_1 >0.15& kpi_1_3_1 <=0.25) {
-      kpi_1_3 <- 4
-    } else {kpi_1_3_1 <- 5}
-    
-    if (overall_target_realization >0.9){
-      kpi_1_1 <- ifelse(kpi_1_1<3, 3, kpi_1_1)
-      kpi_1_2 <- ifelse(kpi_1_2<3, 3, kpi_1_2)
-      kpi_1_3 <- ifelse(kpi_1_3<3, 3, kpi_1_3)
-    } else {
-      kpi_1_1 <- ifelse(kpi_1_1<3, kpi_1_1, 3)
-      kpi_1_2 <- ifelse(kpi_1_2<3, kpi_1_2, 3)
-      kpi_1_3 <- ifelse(kpi_1_3<3, kpi_1_3, 3)
-    }
-    
-    ## point B
-    overall_revenue_distance <- 
-      sum(data_to_use$real_revenue)/filter(best_allocations_info,
-                                           phase == input_phase)$best_revenue
-    
-    ### KPI 1 
-    kpi_2_info_1 <- data_to_use %>%
-      group_by(phase, prod_code) %>%
-      summarise(pp_real_revenue = sum(pp_real_revenue, na.rm = T),
-                target_revenue = sum(target_revenue, na.rm = T),
-                real_revenue = sum(real_revenue, na.rm = T)) %>%
-      left_join(set_target_revenue_info, by = c("phase", "prod_code")) %>%
-      mutate(target_revenue_const = ifelse(target_revenue==0&set_target_revenue==0,
-                                           1,
-                                           target_revenue/set_target_revenue),
-             target_realization = ifelse(target_revenue==0,
-                                         10,
-                                         real_revenue/target_revenue))
-    
-    kpi_2_1_1 <- dist(rbind(kpi_2_info_1$target_revenue_const,rep(1,length(nrow(kpi_2_info_1))))) 
-    kpi_2_1_2 <- sum(kpi_2_info_1$target_realization >=0.9 &kpi_2_info_1$target_realization <=1.2)
-    
-    if (kpi_2_1_1 >0.2) {
-      kpi_2_1 <- 1
-    } else if (kpi_2_1_2 == 0) {
-      kpi_2_1 <- 2
-    } else if (kpi_2_1_2 == 1) {
-      kpi_2_1 <- 3
-    } else if (kpi_2_1_2 == 2) {
-      kpi_2_1 <- 4
-    } else {kpi_2_1 <- 5}
-    
-    ### KPI 2
-    kpi_2_info_2 <- data_to_use %>%
-      group_by(hosp_code) %>%
-      summarise(salesmen = first(salesmen),
-                prod_hours = sum(prod_hours, na.rm = T)) %>%
-      left_join(unique(select(decision_input, hosp_code, budget)), by = c("hosp_code")) %>%
-      mutate(rank_time = dense_rank(-prod_hours),
-             rank_budget = dense_rank(-budget)) %>%
-      left_join(kpi_1_info_3, by = "hosp_code")
-    
-    kpi_2_2_1 <- kpi_2_info_2 %>%
-      filter(rank_target <= 4) 
-    kpi_2_2_1_1 <- dist(rbind(kpi_2_2_1$rank_time,kpi_2_2_1$rank_target))
-    kpi_2_2_1_2 <- dist(rbind(kpi_2_2_1$rank_budget,kpi_2_2_1$rank_target))
-    
-    kpi_2_2_2 <- kpi_2_info_2 %>%
-      filter(rank_target > 4)
-    kpi_2_2_2_1 <- dist(rbind(kpi_2_2_2$rank_time,kpi_2_2_2$rank_target))
-    kpi_2_2_2_2 <- dist(rbind(kpi_2_2_2$rank_budget,kpi_2_2_2$rank_target))
-    
-    kpi_2_2_2_3 <- 0.8*kpi_2_2_1_1 + 0.2*kpi_2_2_2_1
-    kpi_2_2_2_4 <- 0.8*kpi_2_2_1_2 + 0.2*kpi_2_2_2_2
-    kpi_2_2_2_5 <- mean(c(kpi_2_2_2_3, kpi_2_2_2_4))
-    
-    if(kpi_2_2_2_5 > 6) {
-      kpi_2_2 <- 1
-    } else if (kpi_2_2_2_5 >4& kpi_2_2_2_5 <=6) {
-      kpi_2_2 <- 2
-    } else if (kpi_2_2_2_5 >3& kpi_2_2_2_5 <=4) {
-      kpi_2_2 <- 3
-    } else if (kpi_2_2_2_5 >2& kpi_2_2_2_5 <=3) {
-      kpi_2_2 <- 4
-    } else {
-      kpi_2_2 <- 5
-    }
-    ### KPI 3
-    kpi_2_info_3 <- data_to_use %>%
-      select(hosp_code, prod_code,
-             prod_hours)
-    
-    highest_revenue <- filter(best_allocations_info,phase == input_phase)$best_revenue
-    
-    kpi_2_3_1 <- var(kpi_2_info_3$prod_hours)
-    kpi_2_3_2 <- var(unique(select(decision_input, hosp_code, budget))$budget)
-    kpi_2_3_3 <- sum(data_to_use$real_revenue)/highest_revenue 
-    
-    if (kpi_2_3_3 < 0.6|kpi_2_3_1<60|kpi_2_3_2<10) {
-      kpi_2_3 <- 1
-    } else if (kpi_2_3_3 >=0.6 & kpi_2_3_3 <0.8) {
-      kpi_2_3 <- 2
-    } else if (kpi_2_3_3 >=0.8 & kpi_2_3_3 <0.9) {
-      kpi_2_3 <- 3
-    } else if (kpi_2_3_3 >=0.9 & kpi_2_3_3 <1) {
-      kpi_2_3 <- 4
-    } else {kpi_2_3 <- 5}
-    
-    if (overall_revenue_distance >0.8){
-      kpi_2_1 <- ifelse(kpi_2_1<3, 3, kpi_2_1)
-      kpi_2_2 <- ifelse(kpi_2_2<3, 3, kpi_2_2)
-      kpi_2_3 <- ifelse(kpi_2_3<3, 3, kpi_2_3)
-    } else {
-      kpi_2_1 <- ifelse(kpi_2_1<3, kpi_2_1, 3)
-      kpi_2_2 <- ifelse(kpi_2_2<3, kpi_2_2, 3)
-      kpi_2_3 <- ifelse(kpi_2_3<3, kpi_2_3, 3)
-    }
-    
-    ## point C
-    team_ability_delta <- mean(c(data_to_use$product_knowledge_index,
-                                 data_to_use$sales_skills_index,
-                                 data_to_use$motivation_index)) -
-      mean(c(data_to_use$pp_product_knowledge_index,
-             data_to_use$pp_sales_skills_index,
-             data_to_use$pp_motivation_index))    
-    
-    
-    ### KPI 1
-    kpi_3_info_1 <- data_to_use %>%
-      filter(salesmen != 0) %>%
-      group_by(salesmen) %>%
-      summarise(pp_real_revenue = sum(pp_real_revenue, na.rm = T),
-                target_revenue = sum(prod_value, na.rm = T),
-                real_revenue = sum(real_revenue, na.rm = T),
-                field_work = first(field_work),
-                pp_experience_index = first(pp_experience_index)) %>%
-      mutate(target_realization = real_revenue/target_revenue,
-             target_increase = target_revenue/pp_real_revenue,
-             rank_increase = dense_rank(-target_increase),
-             rank_pp_exper = dense_rank(pp_experience_index),
-             focus_sr = ifelse(rank_increase%in%1|rank_pp_exper%in%1:2,
-                               1,
-                               0)) 
-    
-    kpi_3_1_1 <- sum(kpi_3_info_1$real_revenue)/sum(kpi_3_info_1$target_revenue)
-    kpi_3_1_2 <- sum(kpi_3_info_1$target_realization <=1.2&kpi_3_info_1$target_realization>0.9)
-    kpi_3_1_3 <- sum(kpi_3_info_1$field_work>=5&kpi_3_info_1$field_work<=10)
-    kpi_3_1_4 <- sum(filter(kpi_3_info_1, focus_sr == 1)$field_work>=8)/nrow(filter(kpi_3_info_1, focus_sr == 1))
-    
-    if (kpi_3_1_1 >1.2 | kpi_3_1_1 <0.9 |kpi_3_1_3<3 |kpi_3_1_4<0.4) {
-      kpi_3_1 <- 1
-    } else if (kpi_3_1_2 ==1|
-               (kpi_3_1_4>=0.4&kpi_3_1_4<0.6)|
-               (kpi_3_1_3==3)) {
-      kpi_3_1 <- 2
-    } else if (kpi_3_1_2 ==2) {
-      kpi_3_1 <- 3
-    } else if (kpi_3_1_2 ==3) {
-      kpi_3_1 <- 4
-    } else {kpi_3_1 <- 5}
-    
-    
-    ### KPI 2 
-    kpi_3_info_2 <- data_to_use %>%
-      filter(salesmen != 0) %>%
-      select(salesmen, motivation_index,
-             pp_motivation_index) %>%
-      distinct() %>%
-      mutate(motivation_delta = motivation_index - pp_motivation_index)
-    
-    kpi_3_2_1 <- mean(kpi_3_info_2$motivation_delta)
-    
-    if (kpi_3_2_1 <= 0) {
-      kpi_3_2 <- 1
-    } else if (kpi_3_2_1 >0& kpi_3_2_1<=2) {
-      kpi_3_2 <- 2
-    } else if (kpi_3_2_1 >2& kpi_3_2_1<=4) {
-      kpi_3_2 <- 3
-    } else if (kpi_3_2_1 >4& kpi_3_2_1<=6) {
-      kpi_3_2 <- 4
-    } else { kpi_3_2 <- 5}
-    
-    ### KPI 3
-    kpi_3_info_3 <- data_to_use %>%
-      filter(salesmen != 0) %>%
-      select(salesmen, sales_training,
-             pp_sales_skills_index,
-             product_training,
-             pp_product_knowledge_index) %>%
-      distinct() %>%
-      mutate(rank_skills = dense_rank(pp_sales_skills_index),
-             rank_sales_train = dense_rank(-sales_training),
-             rank_knowledge = dense_rank(pp_product_knowledge_index),
-             rank_prod_train = dense_rank(-product_training),
-             wht_sales_train = sales_training<8,
-             wht_prod_train = product_training>4)
-    
-    kpi_3_3_1 <- dist(rbind(kpi_3_info_3$rank_prod_train,kpi_3_info_3$rank_knowledge))
-    kpi_3_3_2 <- dist(rbind(kpi_3_info_3$rank_sales_train,kpi_3_info_3$rank_skills))
-    kpi_3_3_3 <- mean(c(kpi_3_3_1,kpi_3_3_2))
-    
-    if (kpi_3_3_3 >10) {
-      kpi_3_3 <- 1
-    } else if (kpi_3_3_3>6&kpi_3_3_3<=10) {
-      kpi_3_3 <- 2
-    } else if (kpi_3_3_3>4&kpi_3_3_3<6) {
-      kpi_3_3 <- 3
-    } else if (kpi_3_3_3>2&kpi_3_3_3<=4) {
-      kpi_3_3 <- 4
-    } else {kpi_3_3 <- 5}
-    
-    if (team_ability_delta >2){
-      kpi_3_1 <- ifelse(kpi_3_1<3, 3, kpi_3_1)
-      kpi_3_2 <- ifelse(kpi_3_2<3, 3, kpi_3_2)
-      kpi_3_3 <- ifelse(kpi_3_3<3, 3, kpi_3_3)
-    } else {
-      kpi_3_1 <- ifelse(kpi_3_1<3, kpi_3_1, 3)
-      kpi_3_2 <- ifelse(kpi_3_2<3, kpi_3_2, 3)
-      kpi_3_3 <- ifelse(kpi_3_3<3, kpi_3_3, 3)
-    }
-    
-    part2 <- data.frame(phase = rep(input_phase,length.out=9),
-                        ability_code = rep(1:3,each=3),
-                        kpi_code = rep(1:3,times=3)) %>%
-      mutate(basic_score = get(paste("kpi",ability_code, kpi_code, sep="_")),
-             second_score = ifelse(basic_score >3,3,NA),
-             second_score = ifelse(basic_score ==1,1,second_score),
-             second_score = ifelse(basic_score >1&basic_score<=3,2,second_score))
-    
-    out <- list("phase" = input_phase,
-                "assess_results" = part2,
-                "final_revenue_info" = list("pp_revenue"=pp_total_revenue,
-                                            "revenue"= total_revenue,
-                                            "uplift_ratio" = total_revenue_uplift_ratio),
-                "achievement_info" = achievement_info,
-                "market_share_info" = market_share_info,
-                "team_ability_info" = list("pp_team_ability" = team_ability_info$pp_team_ability,
-                                           "team_ability"=team_ability_info$team_ability,
-                                           "uplift_ratio"=team_ability_info$uplift_ratio))
-    return(out)
-  }
-  
-  aggregation_assess_reports <- function(info,
-                                         pp_info){
-    
-    pp_assess_results <- pp_info$assess_results[[1]]
-    pp_final_revenue_info <- pp_info$final_revenue_info
-    pp_achievement_info <- pp_info$achievement_info[[1]]
-    pp_market_share_info <- pp_info$market_share_info[[1]]
-    pp_team_ability_info <- pp_info$team_ability_info
-    
-    final_assess_results <- bind_rows(info$assess_results,
-                                      pp_assess_results) %>%
-      group_by(ability_code,
-               kpi_code) %>%
-      arrange(phase) %>%
-      dplyr::summarise(basic_score = mean(basic_score),
-                       second_score = mean(second_score))
-    final_total_revenue <- pp_final_revenue_info$revenue+info$final_revenue_info$revenue
-    final_pp_total_revenue <- pp_final_revenue_info$pp_revenue
-    final_total_revenue_uplift_ratio <- info$final_revenue_info$revenue/final_pp_total_revenue - 1 
-    
-    final_achievement_info <- bind_rows(pp_achievement_info,
-                                        info$achievement_info) %>%
-      group_by(prod_code) %>%
-      dplyr::summarise(real_revenue = sum(real_revenue,  na.rm = T),
-                       target_revenue = sum(target_revenue, na.rm = T)) %>%
-      dplyr::mutate(achievement_ratio = real_revenue/target_revenue)
-    
-    
-    final_market_share_info <- bind_rows(pp_market_share_info,
-                                         info$market_share_info) %>%
-      group_by(prod_code) %>%
-      dplyr::summarise(pp_market_share = pp_market_share[phase==1],
-                       market_share = market_share[phase==1]) %>%
-      dplyr::mutate(uplift_ratio = market_share- pp_market_share)
-    
-    final_pp_team_ability <- pp_team_ability_info$pp_team_ability
-    final_team_ability <- info$team_ability_info$team_ability
-    final_team_ability_uplift_ratio <- final_team_ability/final_pp_team_ability-1
-    
-    out <- list("phase" = 100,
-                "assess_results" = final_assess_results,
-                "final_revenue_info" = list("pp_revenue"=final_pp_total_revenue,
-                                            "revenue"= final_total_revenue,
-                                            "uplift_ratio" = final_total_revenue_uplift_ratio),
-                "achievement_info" = final_achievement_info,
-                "market_share_info" = final_market_share_info,
-                "team_ability_info" = list("pp_team_ability" = final_pp_team_ability,
-                                           "team_ability"= final_team_ability,
-                                           "uplift_ratio"= final_team_ability_uplift_ratio))
-    
-    return(out)
-    
-  }
-  
-  
-  assess_info <- assessment_func(Phase,
-                                 data_to_use,
-                                 management_input,
-                                 decision_input,
-                                 set_target_revenue_info,
-                                 best_allocations)
-  
-  assess_info_mongo <- mongodb_ass$find()
-  
-  if ( R_Json_Path%in%assess_info_mongo$uuid ) {
-    if (Phase == 1) {
-      out <- list("phase_1" = assess_info)
-    } else {
-      
-      final_assess <- aggregation_assess_reports(assess_info,
-                                                 pp_assess_info)
-      out <- list("phase_1" = as.list(pp_assess_info),
-                  "phase_2" = assess_info,
-                  "final" = final_assess)
-    }
-    
-    mongo_assess_tmp <- paste('{"uuid" : ', '"', R_Json_Path, '"}',sep = "")
-    mongo_assess_tmp2 <- paste('{"$set":{"time":',as.numeric(as.POSIXct(Sys.Date(), format="%Y-%m-%d")),',"result":',toJSON(out,auto_unbox = T),'}}', sep = "")
-    mongodb_ass$update(mongo_assess_tmp, mongo_assess_tmp2)
-    
-    
-  } else {
-    
-    mongodb_ass$insert(list("uuid"= R_Json_Path,
-                            "user_id"= user_name,
-                            "time" = as.numeric(as.POSIXct(Sys.Date(), format="%Y-%m-%d")),
-                            "result"= list("phase_1"= assess_info)),
-                       na="string",
-                       auto_unbox = T)}
-  
-
-  
-
   
   ##----------------------------------------------------------------------------
   ##--                 making reports
