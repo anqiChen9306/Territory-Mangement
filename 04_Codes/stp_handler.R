@@ -1015,7 +1015,18 @@
              second_score = ifelse(basic_score ==1,1,second_score),
              second_score = ifelse(basic_score >1&basic_score<=3,2,second_score))
     
+    score <- median(part2$second_score)
+    
+    if (score >= 3) {
+      overall_score <- "gold"
+    } else if (score <3&score>=2) {
+      overall_score <- "silver"
+    } else {
+      overall_score <- "bronze"
+    }
+    
     out <- list("phase" = input_phase,
+                "overall_score" = overall_score,
                 "assess_results" = part2,
                 "final_revenue_info" = list("pp_revenue"=pp_total_revenue,
                                             "revenue"= total_revenue,
@@ -1031,6 +1042,7 @@
   aggregation_assess_reports <- function(info,
                                          pp_info){
     
+    pp_overall_score <- pp_info$overall_score
     pp_assess_results <- pp_info$assess_results[[1]]
     pp_final_revenue_info <- pp_info$final_revenue_info
     pp_achievement_info <- pp_info$achievement_info[[1]]
@@ -1067,17 +1079,29 @@
     final_team_ability <- info$team_ability_info$team_ability
     final_team_ability_uplift_ratio <- final_team_ability/final_pp_team_ability-1
     
+    final_score <- median(final_assess_results$second_score)
+    
+    if (final_score >= 3) {
+      overall_score <- "gold"
+    } else if (final_score <3&final_score>=2) {
+      overall_score <- "silver"
+    } else {
+      overall_score <- "bronze"
+    }
+    
     out <- list(list("phase" = 100,
-                "assess_results" = final_assess_results,
-                "final_revenue_info" = list("pp_revenue"=final_pp_total_revenue,
-                                            "revenue"= final_total_revenue,
-                                            "uplift_ratio" = final_total_revenue_uplift_ratio),
-                "achievement_info" = final_achievement_info,
-                "market_share_info" = final_market_share_info,
-                "team_ability_info" = list("pp_team_ability" = final_pp_team_ability,
-                                           "team_ability"= final_team_ability,
-                                           "uplift_ratio"= final_team_ability_uplift_ratio)),
+                     "overall_score" = overall_score,
+                     "assess_results" = final_assess_results,
+                     "final_revenue_info" = list("pp_revenue"=final_pp_total_revenue,
+                                                 "revenue"= final_total_revenue,
+                                                 "uplift_ratio" = final_total_revenue_uplift_ratio),
+                     "achievement_info" = final_achievement_info,
+                     "market_share_info" = final_market_share_info,
+                     "team_ability_info" = list("pp_team_ability" = final_pp_team_ability,
+                                                "team_ability"= final_team_ability,
+                                                "uplift_ratio"= final_team_ability_uplift_ratio)),
                 list("phase" = pp_info$phase,
+                     "overall_score" = pp_overall_score,
                      "assess_results" = pp_assess_results,
                      "final_revenue_info" = list("pp_revenue"=pp_final_revenue_info$pp_revenue,
                                                  "revenue"= pp_final_revenue_info$revenue,
@@ -1679,8 +1703,8 @@
         } else {
           
           list("phase" = inter_chk$phase,
-               "data" = inter_chk$data,
-               "report" = inter_chk$report,
+               "data" = inter_chk$data[[1]],
+               "report" = inter_chk$report[[1]],
                "acc_success_value" = inter_chk$acc_success_value)
         }
       })
