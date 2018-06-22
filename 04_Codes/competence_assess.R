@@ -124,10 +124,12 @@ all_data_m <-  bind_rows(phase_0,
   mutate(pp_total_revenue = total_revenue[1],
          pp_market_share = market_share[1],
          pp_team_ability = team_ability[1]) %>%
-  filter(phase == 2) %>%
-  mutate(market_share_growth = market_share - pp_market_share,
+  filter(phase != 0) %>%
+  mutate(total_revenue_for2phase = sum(total_revenue, na.rm = T),
+         market_share_growth = market_share - pp_market_share,
          team_ability_growth = team_ability - pp_team_ability) %>%
-  select(phase, total_revenue, market_share, market_share_growth,
+  filter(phase == 2) %>%
+  select(total_revenue_for2phase, market_share, market_share_growth,
          team_ability, team_ability_growth)
 
 

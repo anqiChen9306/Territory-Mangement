@@ -714,7 +714,7 @@
     kpi_1_1_1 <- diff(c(6,unique(management_input$kpi_analysis)))  # check KPI analysis
     kpi_1_1_2 <- sum(kpi_1_info_1$cluster_score) #check estimated market share&current share
     
-    if ((kpi_1_1_1 <0&kpi_1_1_1>4) | kpi_1_1_2<0.6) {
+    if ((kpi_1_1_1>4) | kpi_1_1_2<0.6) {
       kpi_1_1 <- 1
     } else if (kpi_1_1_2>= 0.6 & kpi_1_1_2<0.7) {
       kpi_1_1 <- 2
@@ -1039,8 +1039,13 @@
     return(out)
   }
   
-  aggregation_assess_reports <- function(info,
+  aggregation_assess_reports <- function(phase,
+                                         info,
                                          pp_info){
+    
+    # phase = 2
+    # info = assess_info
+    # pp_info = pp_assess_info
     
     pp_overall_score <- pp_info$overall_score
     pp_assess_results <- pp_info$assess_results[[1]]
@@ -1056,9 +1061,21 @@
       arrange(phase) %>%
       dplyr::summarise(basic_score = mean(basic_score),
                        second_score = mean(second_score))
+    final_assess_results$basic_score <- sapply(final_assess_results$basic_score, function(x) {
+      if (x <=1 ){
+        1
+      } else if (x <=2 &x >1) {
+        sample(2:3,1)
+      } else if (x <3 &x >2) {
+        sample(2:3,1) 
+      } else if (x <4 &x >=3) {
+        sample(3:4,1)
+      } else { sample(4:5,1)}
+    })
+    
     final_total_revenue <- pp_final_revenue_info$revenue+info$final_revenue_info$revenue
     final_pp_total_revenue <- pp_final_revenue_info$pp_revenue
-    final_total_revenue_uplift_ratio <- info$final_revenue_info$revenue/final_pp_total_revenue - 1 
+    final_total_revenue_uplift_ratio <- (info$final_revenue_info$revenue/final_pp_total_revenue - 1)^(1/phase)
     
     final_achievement_info <- bind_rows(pp_achievement_info,
                                         info$achievement_info) %>%
@@ -1072,12 +1089,12 @@
                                          info$market_share_info) %>%
       group_by(prod_code) %>%
       dplyr::summarise(pp_market_share = pp_market_share[phase==1],
-                       market_share = market_share[phase==1]) %>%
+                       market_share = market_share[phase==2]) %>%
       dplyr::mutate(uplift_ratio = market_share- pp_market_share)
     
     final_pp_team_ability <- pp_team_ability_info$pp_team_ability
     final_team_ability <- info$team_ability_info$team_ability
-    final_team_ability_uplift_ratio <- final_team_ability/final_pp_team_ability-1
+    final_team_ability_uplift_ratio <- (final_team_ability/final_pp_team_ability-1)^(1/phase)
     
     final_score <- median(final_assess_results$second_score)
     
@@ -1131,7 +1148,8 @@
       out <- list("phase_1" = assess_info)
     } else {
       
-      final_assess <- aggregation_assess_reports(assess_info,
+      final_assess <- aggregation_assess_reports(Phase,
+                                                 assess_info,
                                                  pp_assess_info)
       out <- list("phase_1" = final_assess[[2]],
                   "phase_2" = assess_info,
