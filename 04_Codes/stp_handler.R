@@ -19,7 +19,7 @@
   
   options(scipen=200,
           mongodb = list(
-            "host" = "127.0.0.1:27017"
+            "host" = "192.168.100.142:27017"
             # "username" = "root",
             # "password" = "root"
           ))
@@ -783,10 +783,11 @@
              rank_target)
     
     kpi_1_3_1 <- dist(rbind(kpi_1_info_3$cum_prob_tgrevenue, kpi_1_info_3$cum_prob_potential))
+    kpi_1_3_2 <- var(data_to_use$target_revenue)
     users_target_hosp <- kpi_1_info_3 %>%
       filter(rank_target <= 4)
     
-    if (kpi_1_3_1 > 0.6) {
+    if (kpi_1_3_1 > 0.6 ) {
       kpi_1_3 <- 1
     } else if (kpi_1_3_1 >0.4& kpi_1_3_1 <= 6) {
       kpi_1_3 <- 2 
@@ -798,12 +799,16 @@
     
     if (overall_target_realization >0.9){
       kpi_1_1 <- ifelse(kpi_1_1<3, 3, kpi_1_1)
-      kpi_1_2 <- ifelse(kpi_1_2<3, 3, kpi_1_2)
+      kpi_1_2 <- ifelse(kpi_1_3<3, 3, kpi_1_3)
       kpi_1_3 <- ifelse(kpi_1_3<3, 3, kpi_1_3)
-    } else {
+    } else  {
       kpi_1_1 <- ifelse(kpi_1_1<3, kpi_1_1, 3)
       kpi_1_2 <- ifelse(kpi_1_2<3, kpi_1_2, 3)
       kpi_1_3 <- ifelse(kpi_1_3<3, kpi_1_3, 3)
+    }
+    
+    if (kpi_1_3_2 < 100) {
+      kpi_1_3 <- 2
     }
     
     ## point B
@@ -1062,7 +1067,7 @@
       arrange(phase) %>%
       dplyr::summarise(basic_score = mean(basic_score),
                        second_score = mean(second_score))
-    final_assess_results$basic_score <- sapply(final_assess_results$basic_score, function(x) {
+    final_assess_results$basic_score <- sapply(final_assess_results$basic_score, function(x) { 
       if (x <=1 ){
         1
       } else if (x <=2 &x >1) {
