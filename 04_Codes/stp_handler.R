@@ -794,7 +794,7 @@
       kpi_1_3 <- 3
     } else if (kpi_1_3_1 >0.15& kpi_1_3_1 <=0.25) {
       kpi_1_3 <- 4
-    } else {kpi_1_3_1 <- 5}
+    } else {kpi_1_3 <- 5}
     
     if (overall_target_realization >0.9){
       kpi_1_1 <- ifelse(kpi_1_1<3, 3, kpi_1_1)
