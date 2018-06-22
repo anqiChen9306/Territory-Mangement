@@ -1076,14 +1076,8 @@
     
     final_total_revenue <- pp_final_revenue_info$revenue+info$final_revenue_info$revenue
     final_pp_total_revenue <- pp_final_revenue_info$pp_revenue
-    final_total_revenue_uplift_ratio <- info$final_revenue_info$revenue/final_pp_total_revenue - 1
-    if  (final_total_revenue_uplift_ratio < 0 ) {
-      final_total_revenue_uplift_ratio <- -abs(final_total_revenue_uplift_ratio)^(1/phase)
-    } else {
-      final_total_revenue_uplift_ratio <- final_total_revenue_uplift_ratio^(1/phase)
-    }
-    
-    
+    final_total_revenue_uplift_ratio <- (info$final_revenue_info$revenue/final_pp_total_revenue)^ (1/phase)- 1
+
     final_achievement_info <- bind_rows(pp_achievement_info,
                                         info$achievement_info) %>%
       group_by(prod_code) %>%
@@ -1103,12 +1097,8 @@
     
     final_pp_team_ability <- pp_team_ability_info$pp_team_ability
     final_team_ability <- info$team_ability_info$team_ability
-    final_team_ability_uplift_ratio <- final_team_ability/final_pp_team_ability-1
-    if  (final_team_ability_uplift_ratio < 0 ) {
-      final_team_ability_uplift_ratio <- -abs(final_team_ability_uplift_ratio)^(1/phase)
-    } else {
-      final_team_ability_uplift_ratio <- final_team_ability_uplift_ratio^(1/phase)
-    }
+    final_team_ability_uplift_ratio <- (final_team_ability/final_pp_team_ability)^(1/phase)-1
+    
     
     final_score <- median(final_assess_results$second_score)
     
