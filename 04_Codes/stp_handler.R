@@ -784,7 +784,7 @@
     
     kpi_1_3_1 <- dist(rbind(kpi_1_info_3$cum_prob_tgrevenue, kpi_1_info_3$cum_prob_potential))
     
-    if (phase == 1) {
+    if (input_phase == 1) {
       chk_data <- data_to_use %>%
         filter(prod_code != 4)
       kpi_1_3_2 <- var(chk_data$target_revenue)
@@ -815,7 +815,7 @@
       kpi_1_3 <- ifelse(kpi_1_3<3, kpi_1_3, 3)
     }
     
-    if (kpi_1_3_2 < 1000) {
+    if (kpi_1_3_2 < 100000) {
       kpi_1_3 <- 2
     }
     
