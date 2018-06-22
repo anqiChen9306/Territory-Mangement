@@ -19,7 +19,7 @@
   
   options(scipen=200,
           mongodb = list(
-            "host" = "192.168.100.142:27017"
+            "host" = "127.0.0.1:27017"
             # "username" = "root",
             # "password" = "root"
           ))
@@ -922,7 +922,8 @@
                 real_revenue = sum(real_revenue, na.rm = T),
                 field_work = first(field_work),
                 pp_experience_index = first(pp_experience_index)) %>%
-      mutate(target_realization = real_revenue/target_revenue,
+      mutate(target_realization = ifelse(is.nan(real_revenue/target_revenue),
+                                         0,real_revenue/target_revenue),
              target_increase = target_revenue/pp_real_revenue,
              rank_increase = dense_rank(-target_increase),
              rank_pp_exper = dense_rank(pp_experience_index),
@@ -1088,7 +1089,9 @@
       group_by(prod_code) %>%
       dplyr::summarise(real_revenue = sum(real_revenue,  na.rm = T),
                        target_revenue = sum(target_revenue, na.rm = T)) %>%
-      dplyr::mutate(achievement_ratio = real_revenue/target_revenue)
+      dplyr::mutate(achievement_ratio = ifelse(is.nan(real_revenue/target_revenue),
+                                               0,
+                                               real_revenue/target_revenue))
     
     
     final_market_share_info <- bind_rows(pp_market_share_info,
