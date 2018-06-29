@@ -786,11 +786,24 @@
     
     if (input_phase == 1) {
       chk_data <- data_to_use %>%
-        filter(prod_code != 4)
-      kpi_1_3_2 <- var(chk_data$target_revenue)
+        filter(prod_code != 4) %>%
+        group_by(hosp_code) %>%
+        summarise(target_revenue =sum(target_revenue, na.rm = T)) %>%
+        mutate(chk = target_revenue/sum(target_revenue),
+                                        chk_m = chk*log10(chk))
+    
     } else {
-      kpi_1_3_2 <- var(data_to_use$target_revenue)
+      
+      chk_data <- data_to_use %>%
+        filter(prod_code != 4) %>%
+        group_by(hosp_code) %>%
+        summarise(target_revenue =sum(target_revenue, na.rm = T)) %>%
+        mutate(chk = target_revenue/sum(target_revenue),
+               chk_m = chk*log10(chk))
+      
     }
+    
+    kpi_1_3_2 <- -sum(chk_data$chk_m)
     
     users_target_hosp <- kpi_1_info_3 %>%
       filter(rank_target <= 4)
@@ -815,7 +828,7 @@
       kpi_1_3 <- ifelse(kpi_1_3<3, kpi_1_3, 3)
     }
     
-    if (kpi_1_3_2 < 100000) {
+    if (kpi_1_3_2 < 0.2) {
       kpi_1_3 <- 2
     }
     
