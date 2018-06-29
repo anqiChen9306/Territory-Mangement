@@ -830,7 +830,7 @@
     
     if (kpi_1_3_2 < 0.2|kpi_1_3_2>0.9) {
       kpi_1_3 <- 2
-    }
+    } else {kpi_1_3 <- kpi_1_3}
     
     ## point B
     overall_revenue_distance <- 
@@ -1037,7 +1037,9 @@
     part2 <- data.frame(phase = rep(input_phase,length.out=9),
                         ability_code = rep(1:3,each=3),
                         kpi_code = rep(1:3,times=3)) %>%
-      mutate(basic_score = get(paste("kpi",ability_code, kpi_code, sep="_")),
+      mutate(basic_score = mapply(function(x,y) get(paste("kpi",x, y, sep="_")),
+                                                  ability_code,kpi_code),
+             chk = paste("kpi",ability_code, kpi_code, sep="_"),
              second_score = ifelse(basic_score >3,3,NA),
              second_score = ifelse(basic_score ==1,1,second_score),
              second_score = ifelse(basic_score >1&basic_score<=3,2,second_score))
