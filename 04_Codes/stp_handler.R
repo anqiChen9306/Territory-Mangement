@@ -675,8 +675,8 @@
                        pp_sales_skills_index = mean(pp_sales_skills_index),
                        pp_product_knowledge_index = mean(pp_product_knowledge_index),
                        pp_motivation_index = mean(pp_motivation_index)) %>%
-      dplyr::mutate(team_ability = (sales_skills_index+product_knowledge_index+motivation_index)/3,
-                    pp_team_ability = (pp_sales_skills_index+pp_product_knowledge_index+pp_motivation_index)/3,
+      dplyr::mutate(team_ability = round((sales_skills_index+product_knowledge_index+motivation_index)/3),
+                    pp_team_ability = round((pp_sales_skills_index+pp_product_knowledge_index+pp_motivation_index)/3),
                     uplift_ratio = team_ability-pp_team_ability) %>%
       dplyr::select(phase, pp_team_ability, team_ability, uplift_ratio)
     
