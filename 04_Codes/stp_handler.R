@@ -683,11 +683,11 @@
     
     ## point A
     overall_target_realization <-
-      sum(data_to_use$real_revenue)/sum(filter(target_info,
+      sum(data$real_revenue)/sum(filter(target_info,
                                                phase==input_phase)$set_target_revenue)
     ### KPI 1 当期市场份额增长率
     
-    kpi_1_info_1 <- data_to_use %>%
+    kpi_1_info_1 <- data %>%
       filter(prod_code!=4) %>%
       arrange(-potential) %>%
       mutate(pp_market_share = ifelse(pp_potential == 0,
@@ -726,7 +726,7 @@
     
     
     ### KPI 2 市场增长率对比指标增长率
-    kpi_1_info_2 <- data_to_use %>%
+    kpi_1_info_2 <- data %>%
       mutate(market_growth = ifelse(pp_potential == 0,
                                     potential/(pp_potential+1),
                                     potential/pp_potential),
@@ -767,7 +767,7 @@
     
     
     ### KPI 3 指标贡献度
-    kpi_1_info_3 <- data_to_use %>%
+    kpi_1_info_3 <- data %>%
       group_by(hosp_code) %>%
       mutate(adj_potential = ifelse((phase==2&hosp_code%in%c(1,2,3,8))|phase==1,
                                     0,
@@ -785,7 +785,7 @@
     kpi_1_3_1 <- dist(rbind(kpi_1_info_3$cum_prob_tgrevenue, kpi_1_info_3$cum_prob_potential))
     
     if (input_phase == 1) {
-      chk_data <- data_to_use %>%
+      chk_data <- data %>%
         filter(prod_code != 4) %>%
         group_by(hosp_code) %>%
         summarise(target_revenue =sum(target_revenue, na.rm = T)) %>%
@@ -794,7 +794,7 @@
     
     } else {
       
-      chk_data <- data_to_use %>%
+      chk_data <- data %>%
         filter(prod_code != 4) %>%
         group_by(hosp_code) %>%
         summarise(target_revenue =sum(target_revenue, na.rm = T)) %>%
@@ -828,17 +828,17 @@
       kpi_1_3 <- ifelse(kpi_1_3<3, kpi_1_3, 3)
     }
     
-    if (kpi_1_3_2 < 0.2) {
+    if (kpi_1_3_2 < 0.2|kpi_1_3_2>0.9) {
       kpi_1_3 <- 2
     }
     
     ## point B
     overall_revenue_distance <- 
-      sum(data_to_use$real_revenue)/filter(best_allocations_info,
+      sum(data$real_revenue)/filter(best_allocations_info,
                                            phase == input_phase)$best_revenue
     
     ### KPI 1 
-    kpi_2_info_1 <- data_to_use %>%
+    kpi_2_info_1 <- data %>%
       group_by(phase, prod_code) %>%
       summarise(pp_real_revenue = sum(pp_real_revenue, na.rm = T),
                 target_revenue = sum(target_revenue, na.rm = T),
@@ -865,7 +865,7 @@
     } else {kpi_2_1 <- 5}
     
     ### KPI 2
-    kpi_2_info_2 <- data_to_use %>%
+    kpi_2_info_2 <- data %>%
       group_by(hosp_code) %>%
       summarise(salesmen = first(salesmen),
                 prod_hours = sum(prod_hours, na.rm = T)) %>%
@@ -900,7 +900,7 @@
       kpi_2_2 <- 5
     }
     ### KPI 3
-    kpi_2_info_3 <- data_to_use %>%
+    kpi_2_info_3 <- data %>%
       select(hosp_code, prod_code,
              prod_hours)
     
@@ -908,7 +908,7 @@
     
     kpi_2_3_1 <- var(kpi_2_info_3$prod_hours)
     kpi_2_3_2 <- var(unique(select(decision_input, hosp_code, budget))$budget)
-    kpi_2_3_3 <- sum(data_to_use$real_revenue)/highest_revenue 
+    kpi_2_3_3 <- sum(data$real_revenue)/highest_revenue 
     
     if (kpi_2_3_3 < 0.6|kpi_2_3_1<60|kpi_2_3_2<10) {
       kpi_2_3 <- 1
@@ -931,16 +931,16 @@
     }
     
     ## point C
-    team_ability_delta <- mean(c(data_to_use$product_knowledge_index,
-                                 data_to_use$sales_skills_index,
-                                 data_to_use$motivation_index)) -
-      mean(c(data_to_use$pp_product_knowledge_index,
-             data_to_use$pp_sales_skills_index,
-             data_to_use$pp_motivation_index))    
+    team_ability_delta <- mean(c(data$product_knowledge_index,
+                                 data$sales_skills_index,
+                                 data$motivation_index)) -
+      mean(c(data$pp_product_knowledge_index,
+             data$pp_sales_skills_index,
+             data$pp_motivation_index))    
     
     
     ### KPI 1
-    kpi_3_info_1 <- data_to_use %>%
+    kpi_3_info_1 <- data %>%
       filter(salesmen != 0) %>%
       group_by(salesmen) %>%
       summarise(pp_real_revenue = sum(pp_real_revenue, na.rm = T),
@@ -976,7 +976,7 @@
     
     
     ### KPI 2 
-    kpi_3_info_2 <- data_to_use %>%
+    kpi_3_info_2 <- data %>%
       filter(salesmen != 0) %>%
       select(salesmen, motivation_index,
              pp_motivation_index) %>%
@@ -996,7 +996,7 @@
     } else { kpi_3_2 <- 5}
     
     ### KPI 3
-    kpi_3_info_3 <- data_to_use %>%
+    kpi_3_info_3 <- data %>%
       filter(salesmen != 0) %>%
       select(salesmen, sales_training,
              pp_sales_skills_index,
