@@ -1,8 +1,8 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-# ProjectName:  TMIST
+# ProjectName:  T***T
 # Purpose:      Calculation
 # programmer:   Anqi Chen
-# Date:         20-11-2017
+# Date:         02-07-2018
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
@@ -788,22 +788,36 @@
       chk_data <- data %>%
         filter(prod_code != 4) %>%
         group_by(hosp_code) %>%
-        summarise(target_revenue =sum(target_revenue, na.rm = T)) %>%
-        mutate(chk = target_revenue/sum(target_revenue),
-                                        chk_m = chk*log10(chk))
+        summarise(target_revenue =sum(target_revenue, na.rm = T),
+                  pp_real_revenue = sum(pp_real_revenue, na.rm = T)) %>%
+        mutate(total_target_revenue = sum(target_revenue, na.rm = T),
+               total_pp_real_revenue = sum(pp_real_revenue, na.rm = T),
+               chk = ifelse(total_target_revenue==0,
+                            0,
+                            target_revenue/total_target_revenue),
+               chk_m = ifelse(chk==0,
+                              0,
+                              chk*log10(chk)))
     
     } else {
       
       chk_data <- data %>%
-        filter(prod_code != 4) %>%
         group_by(hosp_code) %>%
-        summarise(target_revenue =sum(target_revenue, na.rm = T)) %>%
-        mutate(chk = target_revenue/sum(target_revenue),
-               chk_m = chk*log10(chk))
+        summarise(target_revenue =sum(target_revenue, na.rm = T),
+                  pp_real_revenue = sum(pp_real_revenue, na.rm = T)) %>%
+        mutate(total_target_revenue = sum(target_revenue, na.rm = T),
+               total_pp_real_revenue = sum(pp_real_revenue, na.rm = T),
+               chk = ifelse(total_target_revenue==0,
+                            0,
+                            target_revenue/total_target_revenue),
+               chk_m = ifelse(chk==0,
+                              0,
+                              chk*log10(chk)))
       
     }
     
     kpi_1_3_2 <- -sum(chk_data$chk_m)
+    kpi_1_3_3 <- unique(chk_data$total_target_revenue)/unique(chk_data$total_pp_real_revenue)
     
     users_target_hosp <- kpi_1_info_3 %>%
       filter(rank_target <= 4)
@@ -828,7 +842,7 @@
       kpi_1_3 <- ifelse(kpi_1_3<3, kpi_1_3, 3)
     }
     
-    if (kpi_1_3_2 < 0.2|kpi_1_3_2>0.9) {
+    if (kpi_1_3_2 < 0.2|kpi_1_3_2>0.9|kpi_1_3_3<0.8) {
       kpi_1_3 <- 2
     } else {kpi_1_3 <- kpi_1_3}
     
