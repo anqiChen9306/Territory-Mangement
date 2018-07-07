@@ -1129,7 +1129,7 @@
       group_by(prod_code) %>%
       dplyr::summarise(real_revenue = sum(real_revenue,  na.rm = T),
                        target_revenue = sum(target_revenue, na.rm = T)) %>%
-      dplyr::mutate(achievement_ratio = ifelse(is.nan(real_revenue/target_revenue),
+      dplyr::mutate(achievement_ratio = ifelse(is.nan(real_revenue/target_revenue)|is.infinite(real_revenue/target_revenue),
                                                0,
                                                real_revenue/target_revenue))
     

@@ -205,7 +205,7 @@
                  options()$mongodb$host,
                  "TMIST"))
   
-  info_pre <- db_inter$find(paste('{"uuid" : "all"}',sep = ""))
+  info_pre <- db_inter$find(paste('{"uuid" : "all_new"}',sep = ""))
   curves <- info_pre$curves[[1]]
   over_ch <- info_pre$over_ch
   report_names <- info_pre$report_names[[1]]
@@ -289,11 +289,11 @@
   } else {
     
     
-    transfer1 <- db_inter$find(paste('{"uuid" : "',R_Json_Path,'"}',sep = ""))
+    transfer1 <- db_inter$find('{"uuid" : "cebe92eb-ad0f-4053-a1c6-8aaa1594a480"}')
     transfer1_m <- filter(transfer1$inter[[1]], phase == Phase-1)
     inter_data <- transfer1_m$data[[1]]
     last_report1_1 <- transfer1_m$report[[1]]
-    last_acc_success_value <- transfer1_m$acc_success_value
+    last_acc_success_value <- 0
     
     assess_info_need <- mongodb_ass$find(paste('{"uuid" : "',R_Json_Path,'"}',sep = ""))
     pp_assess_info <- assess_info_need$result$phase_1
@@ -418,6 +418,7 @@
     tmp2 <- left_join(cp_data2,pp_data2,by=c("salesmen"))
     
     tmp <- left_join(tmp1,tmp2,by=c("phase","salesmen")) %>%
+      filter(prod_code == 1) %>%
       dplyr::mutate(salesmen = ifelse(prod_hours==0,"0",salesmen),
                     sales_level = ifelse(prod_hours==0,"0",sales_level),
                     pp_real_volume_by_sr = ifelse(prod_hours==0,0,pp_real_volume_by_sr),
@@ -440,24 +441,25 @@
                     target_volume = round(target_revenue/product_price)) %>%
       group_by(phase,salesmen) %>%
       dplyr::mutate(sr_time=prod_hours,
-        no_hospitals = n_distinct(hosp_name),
-        sr_time_total=sum(sr_time,na.rm=T),
-        last_revenue_by_sr = sum(pp_real_revenue,na.rm=T),
-        overhead_proportion = sr_time/sr_time_total,
-        overhead_proportion = ifelse(is.nan(overhead_proportion),0,overhead_proportion)) %>%
+                    no_hospitals = n_distinct(hosp_code),
+                    sr_time_total=sum(sr_time,na.rm=T),
+                    last_revenue_by_sr = sum(pp_real_revenue,na.rm=T),
+                    overhead_proportion = sr_time/sr_time_total,
+                    overhead_proportion = ifelse(is.nan(overhead_proportion),0,overhead_proportion)) %>%
       ungroup %>%
       group_by(phase,hosp_name) %>%
       dplyr::mutate(sr_time_by_hosp=sum(sr_time,na.rm=T)) %>%
       ungroup() %>%
       dplyr::mutate(product_time_proportion=round(sr_time/ifelse(sr_time_by_hosp==0,0.0001,sr_time_by_hosp),2),
                     budget = round(budget*product_time_proportion),
-                    promotional_factor = ifelse(target_revenue==0,0,round(budget/target_revenue*100,2)),
+                    promotional_factor = ifelse(target_revenue==0,0,round(budget/pp_real_revenue*100,2)),
                     sr_acc_field_work = pp_sr_acc_field_work+field_work,
                     overhead_factor = sapply(pp_motivation_index,
                                              function(x) curve(find_sta("curve12",curves,"curves"),x)),
                     overhead_time = round(overhead_factor*overhead,0),
                     real_sr_time = round(sr_time-overhead_time*overhead_proportion,2),
                     real_sr_time = ifelse(real_sr_time < 0, 0, real_sr_time),
+                    real_sr_time_to_cal = real_sr_time/2.5,
                     pp_experience_index = round(sapply(pp_sr_acc_revenue,function(x) round(curve(find_sta("curve11",curves,"curves"),x),2))),
                     field_work_peraccount = field_work/ifelse(no_hospitals==0,0.0001,no_hospitals),
                     product_knowledge_addition_current_period = sapply(product_training,function(x)curve(find_sta("curve26",curves,"curves"),x)),
@@ -486,7 +488,7 @@
                           curve(find_sta("curve38",curves,"curves"),y)} else if (x==as.character(product_info$prod_name[1])&
                                                      z %in% big_hosp_list){
                               curve(find_sta("curve39",curves,"curves"),y)}else{curve(find_sta("curve35",curves,"curves"),y)}},
-                      prod_name,real_sr_time,hosp_name)) %>%
+                      prod_name,real_sr_time_to_cal,hosp_name)) %>%
       dplyr::mutate(sr_sales_performance =
                       (srsp_motivation_delta+pp_sr_sales_performance)*
                       ((find_sta("sr_sales_performance",weightages,"1"))$motivation)+
@@ -684,7 +686,7 @@
     ## point A
     overall_target_realization <-
       sum(data$real_revenue)/sum(filter(target_info,
-                                               phase==input_phase)$set_target_revenue)
+                                        phase==input_phase)$set_target_revenue)
     ### KPI 1 当期市场份额增长率
     
     kpi_1_info_1 <- data %>%
@@ -769,9 +771,6 @@
     ### KPI 3 指标贡献度
     kpi_1_info_3 <- data %>%
       group_by(hosp_code) %>%
-      mutate(adj_potential = ifelse((phase==2&hosp_code%in%c(1,2,3,8))|phase==1,
-                                    0,
-                                    potential)) %>%
       summarise(target_revenue = sum(prod_value, na.rm = T),
                 potential = sum(potential, na.rm = T)) %>%
       arrange(-target_revenue) %>%
@@ -798,7 +797,7 @@
                chk_m = ifelse(chk==0,
                               0,
                               chk*log10(chk)))
-    
+      
     } else {
       
       chk_data <- data %>%
@@ -822,13 +821,13 @@
     users_target_hosp <- kpi_1_info_3 %>%
       filter(rank_target <= 4)
     
-    if (kpi_1_3_1 > 0.6 ) {
+    if (kpi_1_3_1 > 0.8 ) {
       kpi_1_3 <- 1
-    } else if (kpi_1_3_1 >0.4& kpi_1_3_1 <= 6) {
+    } else if (kpi_1_3_1 >0.6& kpi_1_3_1 <= 0.8) {
       kpi_1_3 <- 2 
-    } else if (kpi_1_3_1 >0.25& kpi_1_3_1 <=0.4) {
+    } else if (kpi_1_3_1 >0.4& kpi_1_3_1 <=0.6) {
       kpi_1_3 <- 3
-    } else if (kpi_1_3_1 >0.15& kpi_1_3_1 <=0.25) {
+    } else if (kpi_1_3_1 >0.15& kpi_1_3_1 <=0.4) {
       kpi_1_3 <- 4
     } else {kpi_1_3 <- 5}
     
@@ -849,7 +848,7 @@
     ## point B
     overall_revenue_distance <- 
       sum(data$real_revenue)/filter(best_allocations_info,
-                                           phase == input_phase)$best_revenue
+                                    phase == input_phase)$best_revenue
     
     ### KPI 1 
     kpi_2_info_1 <- data %>%
@@ -934,15 +933,15 @@
       kpi_2_3 <- 4
     } else {kpi_2_3 <- 5}
     
-    if (overall_revenue_distance >0.8){
-      kpi_2_1 <- ifelse(kpi_2_1<3, 3, kpi_2_1)
-      kpi_2_2 <- ifelse(kpi_2_2<3, 3, kpi_2_2)
-      kpi_2_3 <- ifelse(kpi_2_3<3, 3, kpi_2_3)
-    } else {
-      kpi_2_1 <- ifelse(kpi_2_1<3, kpi_2_1, 3)
-      kpi_2_2 <- ifelse(kpi_2_2<3, kpi_2_2, 3)
-      kpi_2_3 <- ifelse(kpi_2_3<3, kpi_2_3, 3)
-    }
+    # if (overall_revenue_distance >0.8){
+    #   kpi_2_1 <- ifelse(kpi_2_1<3, 3, kpi_2_1)
+    #   kpi_2_2 <- ifelse(kpi_2_2<3, 3, kpi_2_2)
+    #   kpi_2_3 <- ifelse(kpi_2_3<3, 3, kpi_2_3)
+    # } else {
+    #   kpi_2_1 <- ifelse(kpi_2_1<3, kpi_2_1, 3)
+    #   kpi_2_2 <- ifelse(kpi_2_2<3, kpi_2_2, 3)
+    #   kpi_2_3 <- ifelse(kpi_2_3<3, kpi_2_3, 3)
+    # }
     
     ## point C
     team_ability_delta <- mean(c(data$product_knowledge_index,
@@ -1036,7 +1035,7 @@
       kpi_3_3 <- 3
     } else if (kpi_3_3_3>2&kpi_3_3_3<=4) {
       kpi_3_3 <- 4
-    } else {kpi_3_3 <- 5}
+    } else {r <- 5}
     
     if (team_ability_delta >2){
       kpi_3_1 <- ifelse(kpi_3_1<3, 3, kpi_3_1)
@@ -1052,13 +1051,13 @@
                         ability_code = rep(1:3,each=3),
                         kpi_code = rep(1:3,times=3)) %>%
       mutate(basic_score = mapply(function(x,y) get(paste("kpi",x, y, sep="_")),
-                                                  ability_code,kpi_code),
-             chk = paste("kpi",ability_code, kpi_code, sep="_"),
+                                  ability_code,kpi_code),
              revenue_distance = overall_revenue_distance,
              basic_score = mapply(function(x,y) {
                if (y < 0.5) {
                  1 } else if ((y >=0.5|y<0.7)& x >2) {
                    2 } else { x}},basic_score, revenue_distance),
+             chk = paste("kpi",ability_code, kpi_code, sep="_"),
              second_score = ifelse(basic_score >3,3,NA),
              second_score = ifelse(basic_score ==1,1,second_score),
              second_score = ifelse(basic_score >1&basic_score<=3,2,second_score))
@@ -1233,7 +1232,6 @@
     
     tmp1 <- tmp %>% 
       dplyr::mutate(prod_name = factor(prod_name,levels=product_info$prod_name)) 
-    
     tmp2 <- tmp %>%
       filter(salesmen!="0") %>%
       dplyr::mutate(salesmen=factor(salesmen,levels = salesmen_list$salesmen))
@@ -1540,8 +1538,7 @@
       arrange(hosp_code,rank) %>%
       select(one_of(resource_allocation_variable_list))
     
-    colnames(report4_mod1) <- c("hosp_code","hosp_name","factor","product_first",
-                                "product_second","product_third","product_fourth","overall")
+    colnames(report4_mod1) <- c("hosp_code","hosp_name","factor","product_first","overall")
     
  
     
@@ -1556,13 +1553,13 @@
              pp_real_revenue,
              target_revenue)%>%
       group_by(hosp_name) %>%
-      do(plyr::rbind.fill(.,data.frame(hosp_name = first(.$hosp_name),
-                                       hosp_code = first(.$hosp_code),
-                                       prod_name = over_ch,
-                                       prod_code = 5,
-                                       real_revenue=sum(.$real_revenue,na.rm=T),
-                                       pp_real_revenue=sum(.$pp_real_revenue,na.rm=T),
-                                       target_revenue = sum(.$target_revenue,na.rm=T)))) %>%
+      # do(plyr::rbind.fill(.,data.frame(hosp_name = first(.$hosp_name),
+      #                                  hosp_code = first(.$hosp_code),
+      #                                  prod_name = over_ch,
+      #                                  prod_code = 5,
+      #                                  real_revenue=sum(.$real_revenue,na.rm=T),
+      #                                  pp_real_revenue=sum(.$pp_real_revenue,na.rm=T),
+      #                                  target_revenue = sum(.$target_revenue,na.rm=T)))) %>%
       dplyr::mutate(real_revenue_increase = real_revenue - pp_real_revenue,
                     real_revenue_increase_ratio = ifelse(is.nan(round(real_revenue_increase/pp_real_revenue*100,0)),
                                                          0,
@@ -1601,11 +1598,11 @@
       dplyr::summarise(real_revenue_by_sr = sum(real_revenue,na.rm=T),
                        pp_real_revenue_by_sr = sum(pp_real_revenue,na.rm=T),
                        target_revenue_by_sr = sum(target_revenue,na.rm=T)) %>%
-      do(plyr::rbind.fill(.,data.frame(salesmen=first(.$salesmen),
-                                       prod_name =over_ch,
-                                       real_revenue_by_sr=sum(.$real_revenue_by_sr,na.rm=T),
-                                       pp_real_revenue_by_sr =sum(.$pp_real_revenue_by_sr,na.rm=T),
-                                       target_revenue_by_sr=sum(.$target_revenue_by_sr,na.rm=T)))) %>%
+      # do(plyr::rbind.fill(.,data.frame(salesmen=first(.$salesmen),
+      #                                  prod_name =over_ch,
+      #                                  real_revenue_by_sr=sum(.$real_revenue_by_sr,na.rm=T),
+      #                                  pp_real_revenue_by_sr =sum(.$pp_real_revenue_by_sr,na.rm=T),
+      #                                  target_revenue_by_sr=sum(.$target_revenue_by_sr,na.rm=T)))) %>%
       dplyr::mutate(sr_target_revenue_realization = ifelse(is.nan(round(real_revenue_by_sr/target_revenue_by_sr*100,0)),0,
                                                            round(real_revenue_by_sr/target_revenue_by_sr*100,0))) %>%
       select(salesmen,
@@ -1650,11 +1647,12 @@
     
     report5_mod3 <- report5_mod3 %>%
       left_join(dplyr::select(product_info,prod_code,prod_name),by="prod_name") %>%
-      arrange(prod_code) 
+      arrange(prod_code) %>%
+      dplyr::select(-prod_code)
 
     colnames(report5_mod3) <- c("prod_name","current_target",
                                 "last_revenue","current_revenue","increase_revenue",
-                                "increase_ratio","target_realization","prod_code")
+                                "increase_ratio","target_realization")
     
    
     
