@@ -296,7 +296,7 @@
     last_acc_success_value <- 0
     
     assess_info_need <- mongodb_ass$find(paste('{"uuid" : "',R_Json_Path,'"}',sep = ""))
-    pp_assess_info <- assess_info_need$result$phase_1
+    # pp_assess_info <- assess_info_need$result$phase_1
     
     
   }
@@ -1083,32 +1083,8 @@
                 "team_ability_info" = list("pp_team_ability" = team_ability_info$pp_team_ability,
                                            "team_ability"=team_ability_info$team_ability,
                                            "uplift_ratio"=team_ability_info$uplift_ratio))
-    return(out)
-  }
-  
-  aggregation_assess_reports <- function(phase,
-                                         info,
-                                         pp_info){
     
-    # phase = 2
-    # info = assess_info
-    # pp_info = pp_assess_info
-    
-    pp_overall_score <- pp_info$overall_score
-    pp_assess_results <- pp_info$assess_results[[1]]
-    pp_final_revenue_info <- pp_info$final_revenue_info
-    pp_achievement_info <- pp_info$achievement_info[[1]]
-    pp_market_share_info <- pp_info$market_share_info[[1]]
-    pp_team_ability_info <- pp_info$team_ability_info
-    
-    final_assess_results <- bind_rows(info$assess_results,
-                                      pp_assess_results) %>%
-      group_by(ability_code,
-               kpi_code) %>%
-      arrange(phase) %>%
-      dplyr::summarise(basic_score = mean(basic_score),
-                       second_score = mean(second_score))
-    final_assess_results$basic_score <- sapply(final_assess_results$basic_score, function(x) { 
+    out$basic_score <- sapply(out$basic_score, function(x) { 
       if (x <=1 ){
         1
       } else if (x <=2 &x >1) {
@@ -1120,68 +1096,106 @@
       } else { sample(4:5,1)}
     })
     
-    final_total_revenue <- pp_final_revenue_info$revenue+info$final_revenue_info$revenue
-    final_pp_total_revenue <- pp_final_revenue_info$pp_revenue
-    final_total_revenue_uplift_ratio <- (info$final_revenue_info$revenue/final_pp_total_revenue)^ (1/phase)- 1
-
-    final_achievement_info <- bind_rows(pp_achievement_info,
-                                        info$achievement_info) %>%
-      group_by(prod_code) %>%
-      dplyr::summarise(real_revenue = sum(real_revenue,  na.rm = T),
-                       target_revenue = sum(target_revenue, na.rm = T)) %>%
-      dplyr::mutate(achievement_ratio = ifelse(is.nan(real_revenue/target_revenue)|is.infinite(real_revenue/target_revenue),
-                                               0,
-                                               real_revenue/target_revenue))
-    
-    
-    final_market_share_info <- bind_rows(pp_market_share_info,
-                                         info$market_share_info) %>%
-      group_by(prod_code) %>%
-      dplyr::summarise(pp_market_share = pp_market_share[phase==1],
-                       market_share = market_share[phase==2]) %>%
-      dplyr::mutate(uplift_ratio = market_share- pp_market_share)
-    
-    final_pp_team_ability <- pp_team_ability_info$pp_team_ability
-    final_team_ability <- info$team_ability_info$team_ability
-    final_team_ability_uplift_ratio <- (final_team_ability/final_pp_team_ability)^(1/phase)-1
-    
-    
-    final_score <- median(final_assess_results$second_score)
-    
-    if (final_score >= 3) {
-      overall_score <- "gold"
-    } else if (final_score <3&final_score>=2) {
-      overall_score <- "silver"
-    } else {
-      overall_score <- "bronze"
-    }
-    
-    out <- list(list("phase" = 100,
-                     "overall_score" = overall_score,
-                     "assess_results" = final_assess_results,
-                     "final_revenue_info" = list("pp_revenue"=final_pp_total_revenue,
-                                                 "revenue"= final_total_revenue,
-                                                 "uplift_ratio" = final_total_revenue_uplift_ratio),
-                     "achievement_info" = final_achievement_info,
-                     "market_share_info" = final_market_share_info,
-                     "team_ability_info" = list("pp_team_ability" = final_pp_team_ability,
-                                                "team_ability"= final_team_ability,
-                                                "uplift_ratio"= final_team_ability_uplift_ratio)),
-                list("phase" = pp_info$phase,
-                     "overall_score" = pp_overall_score,
-                     "assess_results" = pp_assess_results,
-                     "final_revenue_info" = list("pp_revenue"=pp_final_revenue_info$pp_revenue,
-                                                 "revenue"= pp_final_revenue_info$revenue,
-                                                 "uplift_ratio" = pp_final_revenue_info$uplift_ratio),
-                     "achievement_info" = pp_achievement_info,
-                     "market_share_info" = pp_market_share_info,
-                     "team_ability_info" = list("pp_team_ability" = pp_team_ability_info$pp_team_ability,
-                                                "team_ability"= pp_team_ability_info$team_ability,
-                                                "uplift_ratio"= pp_team_ability_info$uplift_ratio)))
     
     return(out)
-    
   }
+  
+  # aggregation_assess_reports <- function(phase,
+  #                                        info,
+  #                                        pp_info){
+  #   
+  #   # phase = 2
+  #   # info = assess_info
+  #   # pp_info = pp_assess_info
+  #   
+  #   pp_overall_score <- pp_info$overall_score
+  #   pp_assess_results <- pp_info$assess_results[[1]]
+  #   pp_final_revenue_info <- pp_info$final_revenue_info
+  #   pp_achievement_info <- pp_info$achievement_info[[1]]
+  #   pp_market_share_info <- pp_info$market_share_info[[1]]
+  #   pp_team_ability_info <- pp_info$team_ability_info
+  #   
+  #   final_assess_results <- bind_rows(info$assess_results,
+  #                                     pp_assess_results) %>%
+  #     group_by(ability_code,
+  #              kpi_code) %>%
+  #     arrange(phase) %>%
+  #     dplyr::summarise(basic_score = mean(basic_score),
+  #                      second_score = mean(second_score))
+  #   final_assess_results$basic_score <- sapply(final_assess_results$basic_score, function(x) { 
+  #     if (x <=1 ){
+  #       1
+  #     } else if (x <=2 &x >1) {
+  #       sample(2:3,1)
+  #     } else if (x <3 &x >2) {
+  #       sample(2:3,1) 
+  #     } else if (x <4 &x >=3) {
+  #       sample(3:4,1)
+  #     } else { sample(4:5,1)}
+  #   })
+  #   
+  #   final_total_revenue <- pp_final_revenue_info$revenue+info$final_revenue_info$revenue
+  #   final_pp_total_revenue <- pp_final_revenue_info$pp_revenue
+  #   final_total_revenue_uplift_ratio <- (info$final_revenue_info$revenue/final_pp_total_revenue)^ (1/phase)- 1
+  # 
+  #   final_achievement_info <- bind_rows(pp_achievement_info,
+  #                                       info$achievement_info) %>%
+  #     group_by(prod_code) %>%
+  #     dplyr::summarise(real_revenue = sum(real_revenue,  na.rm = T),
+  #                      target_revenue = sum(target_revenue, na.rm = T)) %>%
+  #     dplyr::mutate(achievement_ratio = ifelse(is.nan(real_revenue/target_revenue)|is.infinite(real_revenue/target_revenue),
+  #                                              0,
+  #                                              real_revenue/target_revenue))
+  #   
+  #   
+  #   final_market_share_info <- bind_rows(pp_market_share_info,
+  #                                        info$market_share_info) %>%
+  #     group_by(prod_code) %>%
+  #     dplyr::summarise(pp_market_share = pp_market_share[phase==1],
+  #                      market_share = market_share[phase==2]) %>%
+  #     dplyr::mutate(uplift_ratio = market_share- pp_market_share)
+  #   
+  #   final_pp_team_ability <- pp_team_ability_info$pp_team_ability
+  #   final_team_ability <- info$team_ability_info$team_ability
+  #   final_team_ability_uplift_ratio <- (final_team_ability/final_pp_team_ability)^(1/phase)-1
+  #   
+  #   
+  #   final_score <- median(final_assess_results$second_score)
+  #   
+  #   if (final_score >= 3) {
+  #     overall_score <- "gold"
+  #   } else if (final_score <3&final_score>=2) {
+  #     overall_score <- "silver"
+  #   } else {
+  #     overall_score <- "bronze"
+  #   }
+  #   
+  #   out <- list(list("phase" = 100,
+  #                    "overall_score" = overall_score,
+  #                    "assess_results" = final_assess_results,
+  #                    "final_revenue_info" = list("pp_revenue"=final_pp_total_revenue,
+  #                                                "revenue"= final_total_revenue,
+  #                                                "uplift_ratio" = final_total_revenue_uplift_ratio),
+  #                    "achievement_info" = final_achievement_info,
+  #                    "market_share_info" = final_market_share_info,
+  #                    "team_ability_info" = list("pp_team_ability" = final_pp_team_ability,
+  #                                               "team_ability"= final_team_ability,
+  #                                               "uplift_ratio"= final_team_ability_uplift_ratio)),
+  #               list("phase" = pp_info$phase,
+  #                    "overall_score" = pp_overall_score,
+  #                    "assess_results" = pp_assess_results,
+  #                    "final_revenue_info" = list("pp_revenue"=pp_final_revenue_info$pp_revenue,
+  #                                                "revenue"= pp_final_revenue_info$revenue,
+  #                                                "uplift_ratio" = pp_final_revenue_info$uplift_ratio),
+  #                    "achievement_info" = pp_achievement_info,
+  #                    "market_share_info" = pp_market_share_info,
+  #                    "team_ability_info" = list("pp_team_ability" = pp_team_ability_info$pp_team_ability,
+  #                                               "team_ability"= pp_team_ability_info$team_ability,
+  #                                               "uplift_ratio"= pp_team_ability_info$uplift_ratio)))
+  #   
+  #   return(out)
+  #   
+  # }
   
   
   assess_info <- assessment_func(Phase,
@@ -1198,12 +1212,10 @@
       out <- list("phase_1" = assess_info)
     } else {
       
-      final_assess <- aggregation_assess_reports(Phase,
-                                                 assess_info,
-                                                 pp_assess_info)
-      out <- list("phase_1" = final_assess[[2]],
+
+      out <- list("phase_1" = -1,
                   "phase_2" = assess_info,
-                  "final" = final_assess[[1]])
+                  "final" = -1)
     }
     
     mongo_assess_tmp <- paste('{"uuid" : ', '"', R_Json_Path, '"}',sep = "")
@@ -1216,7 +1228,9 @@
     mongodb_ass$insert(list("uuid"= R_Json_Path,
                             "user_id"= user_name,
                             "time" = as.numeric(as.POSIXct(Sys.Date(), format="%Y-%m-%d")),
-                            "result"= list("phase_1"= assess_info)),
+                            "result"= list("phase_1" = -1,
+                                           "phase_2" = assess_info,
+                                           "final" = -1)),
                        na="string",
                        auto_unbox = T)}
   
