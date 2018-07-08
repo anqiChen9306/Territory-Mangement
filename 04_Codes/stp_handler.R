@@ -194,7 +194,7 @@
   promotioal_budget_list <- promotioal_budget_list %>%
     dplyr::mutate(phase = as.integer(phase),
                   total_budget = as.numeric(budget)) %>%
-    dplyr::select(-date, -budget) 
+    dplyr::select(-date, -budget, -one_product_budget) 
   
   
   db_inter <- mongo(collection = "intermedia",

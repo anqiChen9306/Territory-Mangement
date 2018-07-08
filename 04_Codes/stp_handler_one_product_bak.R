@@ -193,8 +193,8 @@
   colnames(promotioal_budget_list)[which(colnames(promotioal_budget_list)=="phrase")] <- "phase"
   promotioal_budget_list <- promotioal_budget_list %>%
     dplyr::mutate(phase = as.integer(phase),
-                  total_budget = as.numeric(budget)) %>%
-    dplyr::select(-date, -budget) 
+                  total_budget = as.numeric(one_product_budget)) %>%
+    dplyr::select(-date, -one_product_budget,-budget) 
   
   
   db_inter <- mongo(collection = "intermedia",
