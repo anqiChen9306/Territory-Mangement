@@ -641,42 +641,40 @@
     pp_total_revenue <- sum(data$pp_real_revenue)
     total_revenue_uplift_ratio <- total_revenue/pp_total_revenue - 1 
     
-    achievement_info <- data %>%
+    business_info_in_need <- data %>%
+      left_join(target_info, by = c("phase", "prod_code")) %>%
       group_by(phase,prod_code) %>%
-      dplyr::summarise(real_revenue = sum(real_revenue, na.rm = T),
-                       target_revenue = sum(target_revenue, na.rm = T)) %>%
-      dplyr::mutate(achievement_ratio = real_revenue/target_revenue,
-                    achievement_ratio = ifelse(is.nan(achievement_ratio)|is.infinite(achievement_ratio),
-                                               0,
-                                               achievement_ratio)) %>%
-      dplyr::select(phase, prod_code, real_revenue, target_revenue, achievement_ratio)
+      summarise(real_revenue = sum(real_revenue, na.rm = T),
+                target_revenue = sum(target_revenue, na.rm = T),
+                pp_real_revenue = sum(pp_real_revenue, na.rm = T),
+                pp_potential = sum(pp_potential, na.rm = T),
+                potential = sum(potential, na.rm = T),
+                set_target_revenue = first(set_target_revenue)) %>%
+      mutate(achievement_ratio = ifelse(target_revenue==0,
+                                        0,
+                                        real_revenue/target_revenue),
+             pp_market_share = pp_real_revenue/pp_potential,
+             market_share = real_revenue/potential,
+             uplift_ratio = market_share - pp_market_share) 
     
-    market_share_info <- data %>%
-      group_by(phase,prod_code) %>%
-      dplyr::summarise(pp_real_revenue = sum(pp_real_revenue, na.rm = T),
-                       real_revenue = sum(real_revenue, na.rm = T),
-                       pp_potential = sum(pp_potential, na.rm = T),
-                       potential = sum(potential, na.rm = T)) %>%
-      dplyr::mutate(pp_market_share = pp_real_revenue/pp_potential,
-                    market_share = real_revenue/potential,
-                    uplift_ratio = market_share - pp_market_share) %>%
-      dplyr::select(phase, prod_code, pp_market_share, market_share, uplift_ratio)
+    achievement_info <- business_info_in_need %>%
+      select(phase, prod_code, real_revenue, target_revenue, achievement_ratio)
+    
+    market_share_info <- business_info_in_need %>%
+      select(phase, prod_code, pp_market_share, market_share, uplift_ratio)
     
     team_ability_info <- data %>%
       filter(salesmen !=0) %>%
-      group_by(phase,salesmen) %>%
-      dplyr::summarise(sales_skills_index = first(sales_skills_index),
-                       product_knowledge_index = first(product_knowledge_index),
-                       motivation_index = first(motivation_index),
-                       pp_sales_skills_index = first(pp_sales_skills_index),
-                       pp_product_knowledge_index = first(pp_product_knowledge_index),
-                       pp_motivation_index = first(pp_motivation_index)) %>%
-      dplyr::summarise(sales_skills_index = mean(sales_skills_index),
-                       product_knowledge_index = mean(product_knowledge_index),
-                       motivation_index = mean(motivation_index),
-                       pp_sales_skills_index = mean(pp_sales_skills_index),
-                       pp_product_knowledge_index = mean(pp_product_knowledge_index),
-                       pp_motivation_index = mean(pp_motivation_index)) %>%
+      select(phase,
+             salesmen,
+             sales_skills_index, 
+             product_knowledge_index,
+             motivation_index,
+             pp_sales_skills_index,
+             pp_product_knowledge_index,
+             pp_motivation_index) %>%
+      distinct() %>%
+      summarise_if(is.numeric, mean) %>%
       dplyr::mutate(team_ability = round((sales_skills_index+product_knowledge_index+motivation_index)/3),
                     pp_team_ability = round((pp_sales_skills_index+pp_product_knowledge_index+pp_motivation_index)/3),
                     uplift_ratio = team_ability-pp_team_ability) %>%
@@ -684,9 +682,13 @@
     
     
     ## point A
-    overall_target_realization <-
-      sum(data$real_revenue)/sum(filter(target_info,
-                                        phase==input_phase)$set_target_revenue)
+    overall_target_realization <- business_info_in_need %>%
+      summarise(real_revenue = sum(real_revenue),
+                set_target_revenue = first(set_target_revenue)) %>%
+      mutate(overall_target_realization = real_revenue/set_target_revenue) 
+    
+    overall_target_realization <- overall_target_realization$overall_target_realization
+    
     ### KPI 1 当期市场份额增长率
     
     kpi_1_info_1 <- data %>%
@@ -758,11 +760,11 @@
     
     if (kpi_1_2_1 > 1) {
       kpi_1_2 <- 1
-    } else if (kpi_1_2_1 >0.9& kpi_1_2_1 <= 1) {
+    } else if (kpi_1_2_1 >0.8& kpi_1_2_1 <= 1) {
       kpi_1_2 <- 2  
-    } else if (kpi_1_2_1 >0.8& kpi_1_2_1 <=0.9) {
-      kpi_1_2 <- 3
     } else if (kpi_1_2_1 >0.6& kpi_1_2_1 <=0.8) {
+      kpi_1_2 <- 3
+    } else if (kpi_1_2_1 >0.5& kpi_1_2_1 <=0.6) {
       kpi_1_2 <- 4
     } else {kpi_1_2 <- 5}
     
@@ -1055,7 +1057,7 @@
              revenue_distance = overall_revenue_distance,
              basic_score = mapply(function(x,y) {
                if (y < 0.5) {
-                 1 } else if ((y >=0.5|y<0.7)& x >2) {
+                 1 } else if ((y >=0.5&y<0.7)& x >2) {
                    2 } else { x}},basic_score, revenue_distance),
              chk = paste("kpi",ability_code, kpi_code, sep="_"),
              second_score = ifelse(basic_score >3,3,NA),
@@ -1084,7 +1086,7 @@
                                            "team_ability"=team_ability_info$team_ability,
                                            "uplift_ratio"=team_ability_info$uplift_ratio))
     
-    out$basic_score <- sapply(out$basic_score, function(x) { 
+    out$assess_results$basic_score <- sapply(out$assess_results$basic_score , function(x) { 
       if (x <=1 ){
         1
       } else if (x <=2 &x >1) {
@@ -1099,104 +1101,6 @@
     
     return(out)
   }
-  
-  # aggregation_assess_reports <- function(phase,
-  #                                        info,
-  #                                        pp_info){
-  #   
-  #   # phase = 2
-  #   # info = assess_info
-  #   # pp_info = pp_assess_info
-  #   
-  #   pp_overall_score <- pp_info$overall_score
-  #   pp_assess_results <- pp_info$assess_results[[1]]
-  #   pp_final_revenue_info <- pp_info$final_revenue_info
-  #   pp_achievement_info <- pp_info$achievement_info[[1]]
-  #   pp_market_share_info <- pp_info$market_share_info[[1]]
-  #   pp_team_ability_info <- pp_info$team_ability_info
-  #   
-  #   final_assess_results <- bind_rows(info$assess_results,
-  #                                     pp_assess_results) %>%
-  #     group_by(ability_code,
-  #              kpi_code) %>%
-  #     arrange(phase) %>%
-  #     dplyr::summarise(basic_score = mean(basic_score),
-  #                      second_score = mean(second_score))
-  #   final_assess_results$basic_score <- sapply(final_assess_results$basic_score, function(x) { 
-  #     if (x <=1 ){
-  #       1
-  #     } else if (x <=2 &x >1) {
-  #       sample(2:3,1)
-  #     } else if (x <3 &x >2) {
-  #       sample(2:3,1) 
-  #     } else if (x <4 &x >=3) {
-  #       sample(3:4,1)
-  #     } else { sample(4:5,1)}
-  #   })
-  #   
-  #   final_total_revenue <- pp_final_revenue_info$revenue+info$final_revenue_info$revenue
-  #   final_pp_total_revenue <- pp_final_revenue_info$pp_revenue
-  #   final_total_revenue_uplift_ratio <- (info$final_revenue_info$revenue/final_pp_total_revenue)^ (1/phase)- 1
-  # 
-  #   final_achievement_info <- bind_rows(pp_achievement_info,
-  #                                       info$achievement_info) %>%
-  #     group_by(prod_code) %>%
-  #     dplyr::summarise(real_revenue = sum(real_revenue,  na.rm = T),
-  #                      target_revenue = sum(target_revenue, na.rm = T)) %>%
-  #     dplyr::mutate(achievement_ratio = ifelse(is.nan(real_revenue/target_revenue)|is.infinite(real_revenue/target_revenue),
-  #                                              0,
-  #                                              real_revenue/target_revenue))
-  #   
-  #   
-  #   final_market_share_info <- bind_rows(pp_market_share_info,
-  #                                        info$market_share_info) %>%
-  #     group_by(prod_code) %>%
-  #     dplyr::summarise(pp_market_share = pp_market_share[phase==1],
-  #                      market_share = market_share[phase==2]) %>%
-  #     dplyr::mutate(uplift_ratio = market_share- pp_market_share)
-  #   
-  #   final_pp_team_ability <- pp_team_ability_info$pp_team_ability
-  #   final_team_ability <- info$team_ability_info$team_ability
-  #   final_team_ability_uplift_ratio <- (final_team_ability/final_pp_team_ability)^(1/phase)-1
-  #   
-  #   
-  #   final_score <- median(final_assess_results$second_score)
-  #   
-  #   if (final_score >= 3) {
-  #     overall_score <- "gold"
-  #   } else if (final_score <3&final_score>=2) {
-  #     overall_score <- "silver"
-  #   } else {
-  #     overall_score <- "bronze"
-  #   }
-  #   
-  #   out <- list(list("phase" = 100,
-  #                    "overall_score" = overall_score,
-  #                    "assess_results" = final_assess_results,
-  #                    "final_revenue_info" = list("pp_revenue"=final_pp_total_revenue,
-  #                                                "revenue"= final_total_revenue,
-  #                                                "uplift_ratio" = final_total_revenue_uplift_ratio),
-  #                    "achievement_info" = final_achievement_info,
-  #                    "market_share_info" = final_market_share_info,
-  #                    "team_ability_info" = list("pp_team_ability" = final_pp_team_ability,
-  #                                               "team_ability"= final_team_ability,
-  #                                               "uplift_ratio"= final_team_ability_uplift_ratio)),
-  #               list("phase" = pp_info$phase,
-  #                    "overall_score" = pp_overall_score,
-  #                    "assess_results" = pp_assess_results,
-  #                    "final_revenue_info" = list("pp_revenue"=pp_final_revenue_info$pp_revenue,
-  #                                                "revenue"= pp_final_revenue_info$revenue,
-  #                                                "uplift_ratio" = pp_final_revenue_info$uplift_ratio),
-  #                    "achievement_info" = pp_achievement_info,
-  #                    "market_share_info" = pp_market_share_info,
-  #                    "team_ability_info" = list("pp_team_ability" = pp_team_ability_info$pp_team_ability,
-  #                                               "team_ability"= pp_team_ability_info$team_ability,
-  #                                               "uplift_ratio"= pp_team_ability_info$uplift_ratio)))
-  #   
-  #   return(out)
-  #   
-  # }
-  
   
   assess_info <- assessment_func(Phase,
                                  data_to_use,

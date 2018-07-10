@@ -26,17 +26,12 @@
   
 
   
-  ## receive signal
-  # argss[1] :  R_File_Path
-  # argss[2] :  filekey of json
+  ## Receive Parameters
   argss <- commandArgs(TRUE)
-  R_Json_Path <- argss[1]
-  Phase <- as.integer(argss[2])
-  #file_path <- argss[3]
-  #R_File_Path <- "resource/pre_data_linux.RData"
-  #load(R_File_Path)
-  
-  ## R_Json_Path <- "219776aa-6d5a-4bcf-bc99-74857e86ec7a"
+  R_Json_Path <- argss[1] #uuid
+  Phase <- as.integer(argss[2]) #phase
+
+    ## R_Json_Path <- "219776aa-6d5a-4bcf-bc99-74857e86ec7a"
   ## Phase <-1
 
 
@@ -1057,7 +1052,7 @@
              revenue_distance = overall_revenue_distance,
              basic_score = mapply(function(x,y) {
                if (y < 0.5) {
-                 1 } else if ((y >=0.5|y<0.7)& x >2) {
+                 1 } else if ((y >=0.5&y<0.7)& x >2) {
                    2 } else { x}},basic_score, revenue_distance),
              second_score = ifelse(basic_score >3,3,NA),
              second_score = ifelse(basic_score ==1,1,second_score),
