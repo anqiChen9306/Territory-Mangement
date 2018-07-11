@@ -683,8 +683,8 @@
     
     ## point A
     overall_target_realization <- business_info_in_need %>%
-      summarise(real_revenue = sum(real_revenue),
-                set_target_revenue = first(set_target_revenue)) %>%
+      summarise(real_revenue = sum(real_revenue, na.rm = T),
+                set_target_revenue = sum(set_target_revenue, na.rm = T)) %>%
       mutate(overall_target_realization = real_revenue/set_target_revenue) 
     
     overall_target_realization <- overall_target_realization$overall_target_realization
@@ -1173,18 +1173,21 @@
     report1_mod1 <- tmp1 %>%
       select(phase,
              salesmen,
-             hosp_name,
              product_knowledge_index,
              sales_skills_index,
-             customer_relationship_index,
              motivation_index,
              real_revenue,
              pp_acc_success_value) %>%
-      distinct() %>%
       dplyr::mutate(total_revenue = round(sum(real_revenue,na.rm=T),2)) %>%
       filter(salesmen!="0") %>%
-      dplyr::mutate(average_customer_relationship_index = round(mean(customer_relationship_index,na.rm=T),2),
-                    average_sales_skills_index = round(mean(sales_skills_index,na.rm=T),2),
+      select(phase,salesmen,
+             total_revenue,
+             pp_acc_success_value,
+             sales_skills_index,
+             product_knowledge_index,
+             motivation_index) %>%
+      distinct() %>%
+      dplyr::mutate(average_sales_skills_index = round(mean(sales_skills_index,na.rm=T),2),
                     average_product_knowledge_index = round(mean(product_knowledge_index,na.rm=T),2),
                     average_motivation_index = round(mean(motivation_index,na.rm=T),2),
                     team_capability = round((average_motivation_index +
@@ -1192,7 +1195,6 @@
                                                average_sales_skills_index)/3)) %>%
       select(phase,
              total_revenue,
-             average_customer_relationship_index,
              team_capability,
              pp_acc_success_value) %>%
       distinct() %>%
