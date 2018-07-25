@@ -16,7 +16,6 @@ library(openxlsx)
 library(mongolite)
 library(jsonlite)
 library(utf8)
-library(modules)
 
 options(scipen=200,
         mongodb = list("host" = "xxx"))
